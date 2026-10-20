@@ -52,14 +52,20 @@ Settings → Updates can turn off the startup check or check by hand.
 
 ## Releasing a new version
 
-Push a version tag; GitHub Actions runs the tests, builds the .exe and publishes the release:
+Double-click `release.cmd` (or run it from a terminal). It checks you're on `main` with everything
+committed and in sync with GitHub, shows what changed since the last release, suggests the next
+version number, and pushes the tag. GitHub Actions then runs the tests, builds the .exe and publishes
+the release; everyone's app offers it on the next launch.
+
+The same thing by hand:
 
 ```
-git tag v0.5.0
-git push origin v0.5.0
+git tag v0.5.1
+git push origin v0.5.1
 ```
 
-Everyone's app sees it the next time it starts. To build an .exe locally instead, run `publish.cmd`.
+Use the last number for fixes (`v0.5.1` → `v0.5.2`) and the middle one for new features
+(`v0.5.2` → `v0.6.0`). To build an .exe locally instead, run `publish.cmd`.
 
 ## Using it
 
