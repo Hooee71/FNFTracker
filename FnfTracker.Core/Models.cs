@@ -95,6 +95,9 @@ public sealed class AppSettings
     /// <summary>Addon games already imported — so a game you delete doesn't come back next import.</summary>
     public List<string> ImportedAddonIds { get; set; } = new();
 
+    /// <summary>Look for a newer release on GitHub each time the app starts.</summary>
+    public bool CheckForUpdates { get; set; } = true;
+
     /// <summary>Where the window was last time the app closed.</summary>
     public WindowPlacement? Window { get; set; }
 }

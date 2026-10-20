@@ -9,7 +9,8 @@
     <RootNamespace>FnfTracker.App</RootNamespace>
     <AssemblyName>FNFTracker</AssemblyName>
     <Product>FNF Tracker</Product>
-    <Version>0.4.0</Version>
+    <!-- Release builds get their version from the git tag (see .github/workflows/release.yml). -->
+    <Version>0.5.0</Version>
     <ApplicationIcon>Assets\fnf.ico</ApplicationIcon>
     <!-- Application.ThemeMode (built-in Fluent dark theme) is flagged experimental. -->
     <NoWarn>$(NoWarn);WPF0001</NoWarn>

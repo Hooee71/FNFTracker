@@ -26,6 +26,11 @@ public partial class MainWindow : Window
     private readonly List<FileSystemWatcher> _watchers = new();
     private ImageSource? _matchesArt, _statsArt;
     private DateOnly? _singleNight;   // the night shown in "Single night" mode
+    private readonly Version _currentVersion =
+        Updater.Normalize(typeof(MainWindow).Assembly.GetName().Version ?? new Version(0, 0, 0));
+    private UpdateInfo? _pendingUpdate;
+    private bool _updating;
+    private bool _skipSaveOnClose;    // set while handing over to a freshly installed update
     private readonly DispatcherTimer _importDebounce = new() { Interval = TimeSpan.FromSeconds(2) };
 
     private AppSettings Settings => _store.Data.Settings;
@@ -76,6 +81,14 @@ public partial class MainWindow : Window
         RunAddonImport(auto: true);
         StartWatching();
         Closed += (_, _) => StopWatching();
+
+        // Updates: tidy up after a previous update, then check GitHub in the background.
+        if (Environment.ProcessPath is string exe) Updater.CleanUpOldVersion(exe);
+        VersionText.Text = $"You're running FNF Tracker {_currentVersion.ToString(3)}.";
+        Loaded += async (_, _) =>
+        {
+            if (Settings.CheckForUpdates) await CheckForUpdatesAsync(userAsked: false);
+        };
     }
 
     // ───────────────────────── Per-tab art ─────────────────────────
@@ -130,6 +143,117 @@ public partial class MainWindow : Window
         RootGrid.Margin = max ? SystemParameters.WindowResizeBorderThickness : new Thickness(0);
     }
 
+    // ───────────────────────── Updates ─────────────────────────
+
+    private async Task CheckForUpdatesAsync(bool userAsked)
+    {
+        UpdateStatusText.Text = "Checking for updates…";
+        try
+        {
+            using var http = Updater.CreateClient(_currentVersion);
+            var update = await Updater.CheckAsync(http, _currentVersion);
+            if (update == null)
+            {
+                _pendingUpdate = null;
+                UpdateBanner.Visibility = Visibility.Collapsed;
+                UpdateStatusText.Text = $"You're up to date ({_currentVersion.ToString(3)}). Checked {DateTime.Now:h:mm tt}.";
+                if (userAsked) Status("You're on the latest version.");
+                return;
+            }
+
+            _pendingUpdate = update;
+            UpdateText.Text = $"Update available: {update.Tag}";
+            UpdateBanner.Visibility = Visibility.Visible;
+            UpdateStatusText.Text = $"{update.Tag} is available. Use \"Update now\" at the bottom of the window.";
+        }
+        catch (Exception ex)
+        {
+            // Offline, GitHub down, rate-limited: never bother the user unless they asked.
+            UpdateStatusText.Text = "Couldn't check for updates: " + ex.Message;
+            if (userAsked) Status("Couldn't check for updates. See Settings.");
+        }
+    }
+
+    private async void UpdateNow_Click(object sender, RoutedEventArgs e)
+    {
+        if (_pendingUpdate is not UpdateInfo update || _updating) return;
+
+        var exe = Environment.ProcessPath;
+        if (exe == null || Updater.IsDevelopmentBuild(exe))
+        {
+            MessageBox.Show("This copy was built from source (Visual Studio or dotnet run), so it won't replace itself.\n\n" +
+                            "Run 'git pull' and rebuild, or download the new FNFTracker.exe from the releases page.",
+                            "FNF Tracker", MessageBoxButton.OK, MessageBoxImage.Information);
+            OpenUrl(update.PageUrl);
+            return;
+        }
+
+        _updating = true;
+        UpdateNowButton.IsEnabled = UpdateLaterButton.IsEnabled = false;
+        try
+        {
+            using var http = Updater.CreateClient(_currentVersion);
+            var progress = new Progress<double>(p => UpdateText.Text = $"Downloading {update.Tag}… {p:P0}");
+            var downloaded = await Updater.DownloadAsync(http, update, exe, progress);
+
+            // Save now, then hand over: the new copy must not start while this one is still writing.
+            SaveWindowPlacement();
+            _skipSaveOnClose = true;
+            StopWatching();
+
+            Updater.SwapIn(downloaded, exe);
+            Process.Start(new ProcessStartInfo(exe) { UseShellExecute = true });
+            Application.Current.Shutdown();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            _skipSaveOnClose = false;
+            StartWatching();
+            MessageBox.Show($"Windows wouldn't let the app replace itself in:\n{Path.GetDirectoryName(exe)}\n\n" +
+                            "Move FNFTracker.exe to a folder you own (for example C:\\Games\\FNFTracker) and try again, " +
+                            "or download the update from the releases page.",
+                            "FNF Tracker", MessageBoxButton.OK, MessageBoxImage.Warning);
+            OpenUrl(update.PageUrl);
+        }
+        catch (Exception ex)
+        {
+            _skipSaveOnClose = false;
+            StartWatching();
+            MessageBox.Show("The update didn't install, and nothing was changed:\n\n" + ex.Message,
+                            "FNF Tracker", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+        finally
+        {
+            _updating = false;
+            UpdateNowButton.IsEnabled = UpdateLaterButton.IsEnabled = true;
+            if (_pendingUpdate != null) UpdateText.Text = $"Update available: {_pendingUpdate.Tag}";
+        }
+    }
+
+    private void WhatsNew_Click(object sender, RoutedEventArgs e) =>
+        OpenUrl(_pendingUpdate?.PageUrl ?? Updater.ReleasesPage);
+
+    private void UpdateLater_Click(object sender, RoutedEventArgs e) =>
+        UpdateBanner.Visibility = Visibility.Collapsed;   // asks again next launch
+
+    private async void CheckUpdates_Click(object sender, RoutedEventArgs e) =>
+        await CheckForUpdatesAsync(userAsked: true);
+
+    private void ReleasesPage_Click(object sender, RoutedEventArgs e) => OpenUrl(Updater.ReleasesPage);
+
+    private void AutoUpdate_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_busy) return;
+        Settings.CheckForUpdates = AutoUpdateCheck.IsChecked == true;
+        Persist();
+    }
+
+    private static void OpenUrl(string url)
+    {
+        try { Process.Start(new ProcessStartInfo(url) { UseShellExecute = true }); }
+        catch { /* no browser registered; nothing useful to do */ }
+    }
+
     // ───────────────────────── Window size & position ─────────────────────────
 
     private void RestoreWindowPlacement()
@@ -165,7 +289,7 @@ public partial class MainWindow : Window
     {
         // RestoreBounds is the normal-size rectangle even while maximized or minimized.
         var b = WindowState == WindowState.Normal ? new Rect(Left, Top, ActualWidth, ActualHeight) : RestoreBounds;
-        if (b.IsEmpty || b.Width <= 0) return;
+        if (_skipSaveOnClose || b.IsEmpty || b.Width <= 0) return;
         Settings.Window = new WindowPlacement
         {
             Left = b.Left,
@@ -826,6 +950,7 @@ public partial class MainWindow : Window
         DefaultSlot1.Slot = Settings.DefaultTeam.ElementAtOrDefault(0) ?? new PlayerSlot();
         DefaultSlot2.Slot = Settings.DefaultTeam.ElementAtOrDefault(1) ?? new PlayerSlot();
         SeasonStartPicker.SelectedDate = Settings.SeasonStart;
+        AutoUpdateCheck.IsChecked = Settings.CheckForUpdates;
         RangeBox.ItemsSource = StatsRange.Options.Select(o => o.Label).ToList();
         RangeBox.SelectedIndex = Math.Max(0, StatsRange.Options.ToList().FindIndex(o => o.Kind == Settings.StatsRange));
         FromPicker.SelectedDate = Settings.StatsFrom;

@@ -380,6 +380,16 @@
                             <Button Content="Save settings" Padding="16,6" HorizontalAlignment="Left"
                                     Click="SaveSettings_Click" />
 
+                            <TextBlock Text="Updates" Style="{StaticResource SectionHeader}" Margin="0,24,0,6" />
+                            <TextBlock x:Name="VersionText" Opacity="0.75" TextWrapping="Wrap" />
+                            <CheckBox x:Name="AutoUpdateCheck" Content="Check for updates when the app starts" Margin="0,8,0,0"
+                                      Checked="AutoUpdate_Changed" Unchecked="AutoUpdate_Changed" />
+                            <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                <Button Content="Check for updates" Padding="12,5" Click="CheckUpdates_Click" />
+                                <Button Content="Releases page" Padding="12,5" Margin="8,0,0,0" Click="ReleasesPage_Click" />
+                            </StackPanel>
+                            <TextBlock x:Name="UpdateStatusText" TextWrapping="Wrap" Opacity="0.75" Margin="0,6,0,0" />
+
                             <TextBlock Text="Season" Style="{StaticResource SectionHeader}" Margin="0,24,0,6" />
                             <TextBlock Text="Season start: used by &quot;This season&quot; on the Stats tab and the season record in the header."
                                        Opacity="0.75" TextWrapping="Wrap" Margin="0,0,0,8" />
@@ -417,7 +427,22 @@
                 </TabItem>
             </TabControl>
 
-            <TextBlock x:Name="StatusText" Grid.Row="2" Margin="2,8,0,0" Opacity="0.8" />
+            <!-- Bottom bar: status messages on the left, update banner on the right when one is available. -->
+            <DockPanel Grid.Row="2" Margin="2,8,0,0">
+                <Border x:Name="UpdateBanner" DockPanel.Dock="Right" Visibility="Collapsed" CornerRadius="6"
+                        Padding="12,4" Background="#33D8B56A" BorderBrush="#806A4A22" BorderThickness="1">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock x:Name="UpdateText" VerticalAlignment="Center" Foreground="#F2DDA8"
+                                   FontFamily="{DynamicResource HeadingFont}" FontSize="14" />
+                        <Button x:Name="UpdateNowButton" Content="Update now" Padding="12,3" Margin="12,0,0,0"
+                                Click="UpdateNow_Click" />
+                        <Button Content="What's new" Padding="12,3" Margin="6,0,0,0" Click="WhatsNew_Click" />
+                        <Button x:Name="UpdateLaterButton" Content="Later" Padding="10,3" Margin="6,0,0,0"
+                                Click="UpdateLater_Click" />
+                    </StackPanel>
+                </Border>
+                <TextBlock x:Name="StatusText" Opacity="0.8" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+            </DockPanel>
 
             <!-- Mascot art: top-right, the width of the match sidebar, fading out downward.
                  Each tab has its own art (or none); see UpdateMascotArt in the code-behind.

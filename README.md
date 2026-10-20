@@ -39,10 +39,27 @@ file on disk; it never touches the running game.
 AddOns screen, or update the `## Interface:` line in `FNFTracker.toc`.
 In game, `/dump (select(4, GetBuildInfo()))` prints the current number.
 
-## Make an .exe for your partner
+## Getting the app (for your partner)
 
-Run `publish.cmd`. It produces a single self-contained `FNFTracker.exe` in `publish\`.
-Your partner can run it without installing .NET.
+Download `FNFTracker.exe` from the [latest release](https://github.com/Hooee71/FNFTracker/releases/latest),
+put it in a folder of its own (e.g. `C:\Games\FNFTracker`), and run it. Nothing else to install.
+Windows may say "Windows protected your PC" the first time because the app isn't code-signed:
+click **More info → Run anyway**.
+
+After that the app updates itself: when a new version is out, a banner at the bottom offers
+**Update now**, which downloads it, checks it, and restarts into the new version. Match data is kept.
+Settings → Updates can turn off the startup check or check by hand.
+
+## Releasing a new version
+
+Push a version tag; GitHub Actions runs the tests, builds the .exe and publishes the release:
+
+```
+git tag v0.5.0
+git push origin v0.5.0
+```
+
+Everyone's app sees it the next time it starts. To build an .exe locally instead, run `publish.cmd`.
 
 ## Using it
 
@@ -82,6 +99,8 @@ Tables and form fields stay in Segoe UI for readability.
 - `FnfTracker.Core`: models, class/spec/map lists (`GameData.cs`), storage, and all stats. No Windows dependencies.
 - `FnfTracker.App`: the WPF app.
 - `Addon\FNFTracker`: the WoW addon (also embedded in the app for one-click install).
+- `tests/FnfTracker.Tests`: checks for stats, addon import and the updater (`dotnet run --project tests/FnfTracker.Tests`).
+- `.github/workflows/release.yml`: builds and publishes releases from version tags.
 
 When Blizzard changes specs or the map pool, edit `FnfTracker.Core/GameData.cs`.
 

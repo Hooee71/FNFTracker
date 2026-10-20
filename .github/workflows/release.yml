@@ -1,0 +1,60 @@
+# Builds FNFTracker.exe and publishes it as a GitHub Release whenever a version tag is pushed.
+#
+#   git tag v0.5.0
+#   git push origin v0.5.0
+#
+# The app's "Check for updates" reads the latest release from this repo, so a new tag is all it
+# takes to ship an update to everyone running the app.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write   # create the release and upload the .exe
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Read version from tag
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}".TrimStart("v")
+          if ($version -notmatch '^\d+\.\d+\.\d+$') { throw "Tag must look like v1.2.3 (got ${{ github.ref_name }})" }
+          "VERSION=$version" >> $env:GITHUB_ENV
+
+      - name: Run core tests
+        run: dotnet run --project tests/FnfTracker.Tests -c Release
+
+      - name: Publish single-file exe
+        run: >
+          dotnet publish FnfTracker.App/FnfTracker.App.csproj -c Release -r win-x64
+          --self-contained true
+          -p:PublishSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:EnableCompressionInSingleFile=true
+          -p:Version=${{ env.VERSION }}
+          -o publish
+
+      - name: Checksum
+        shell: pwsh
+        run: |
+          $hash = (Get-FileHash publish/FNFTracker.exe -Algorithm SHA256).Hash.ToLowerInvariant()
+          [IO.File]::WriteAllText("publish/FNFTracker.exe.sha256", $hash)
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >
+          gh release create "${{ github.ref_name }}"
+          publish/FNFTracker.exe publish/FNFTracker.exe.sha256
+          --title "FNF Tracker ${{ github.ref_name }}"
+          --generate-notes
