@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>FnfTracker.App</RootNamespace>
+    <AssemblyName>FNFTracker</AssemblyName>
+    <Product>FNF Tracker</Product>
+    <Version>0.4.0</Version>
+    <ApplicationIcon>Assets\fnf.ico</ApplicationIcon>
+    <!-- Application.ThemeMode (built-in Fluent dark theme) is flagged experimental. -->
+    <NoWarn>$(NoWarn);WPF0001</NoWarn>
+  </PropertyGroup>
+
+  <!-- The addon ships inside the app so "Install / update addon" can write it into WoW. -->
+  <ItemGroup>
+    <EmbeddedResource Include="..\Addon\FNFTracker\FNFTracker.toc" LogicalName="FnfTracker.Addon.FNFTracker.toc" />
+    <EmbeddedResource Include="..\Addon\FNFTracker\FNFTracker.lua" LogicalName="FnfTracker.Addon.FNFTracker.lua" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\logo.png" />
+    <Resource Include="Assets\fnf.ico" />
+    <Resource Include="Assets\mascots.png" />
+    <Resource Include="Assets\mascots-stats.png" />
+    <Resource Include="Assets\background.jpg" />
+    <!-- Marcellus (SIL Open Font License, see Assets\Fonts\OFL.txt): heading font when Friz Quadrata isn't installed. -->
+    <Resource Include="Assets\Fonts\Marcellus-Regular.ttf" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\FnfTracker.Core\FnfTracker.Core.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,2 +1,97 @@
 # FNFTracker
-Friday Night Fights Arena tracker with Warcraft addon
+
+Friday Night Fights Arena tracker with Warcraft addon.
+
+A small Windows app for logging 2v2 arena games on Thursday and Friday nights and seeing what's working.
+Everything is stored locally in one JSON file. There is no server and no login.
+
+## Build and run
+
+You need the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) on Windows.
+
+```
+dotnet run --project FnfTracker.App
+```
+
+Or open `FNFTracker.sln` in Visual Studio 2026 and press F5.
+
+## The FNF addon
+
+`Addon\FNFTracker` is a small WoW addon that records each arena game automatically:
+both enemy specs and names, map, result, length, rating change, MMR, damage and healing.
+
+**Install:** in the app, go to Settings, set your WoW folder, and click **Install / update addon**.
+(Or copy `Addon\FNFTracker` into `World of Warcraft\_retail_\Interface\AddOns\`.)
+Only one of you needs it, since you're in the same games, but it's fine if you both run it.
+
+**How games get into the app:** WoW only writes addon data to disk when you log out, exit or `/reload`.
+The app imports at that moment if it's open, and again every time it starts. Settings shows the last import.
+Games you already typed in by hand are recognised and not doubled up.
+
+**In game:** `/fnf` lists the last few games the addon has recorded. Unrated 2v2s are imported with a
+`skirmish` tag; 3v3 and Solo Shuffle games are ignored.
+
+**Is it safe?** Yes. It only listens for events and reads the end-of-match scoreboard through
+Blizzard's addon API. It never casts, clicks, queues or sends anything. The app only reads the saved
+file on disk; it never touches the running game.
+
+**If WoW says the addon is out of date:** after a patch, tick "Load out of date AddOns" on the
+AddOns screen, or update the `## Interface:` line in `FNFTracker.toc`.
+In game, `/dump (select(4, GetBuildInfo()))` prints the current number.
+
+## Make an .exe for your partner
+
+Run `publish.cmd`. It produces a single self-contained `FNFTracker.exe` in `publish\`.
+Your partner can run it without installing .NET.
+
+## Using it
+
+**Matches tab:** after each game, press Ctrl+W or Ctrl+L, pick the two enemy classes and specs, and press Ctrl+S.
+Map, rating, length, tags and notes are optional. With the addon installed you can skip this entirely. Type in a class box to jump (e.g. "Ro" for Rogue).
+"Same as last game" copies the previous opponents for a rematch. Click a row to edit or delete it.
+
+If you leave **+/-** blank but fill in **Rating after**, the app works out the change from your last rated game.
+
+**Stats tab:** record, streaks, rating line, and win rate broken down by enemy comp, class, spec,
+comp type (double DPS vs. healer), map, game number in the night, game length, day of week, night, tag,
+and opponents you've played more than once. Green means 60%+, red means 40% or less; anything under 3 games is grey.
+Use **Show** to pick which games count: All time, This season, a Single night (◀ ▶ jump between
+nights you played), Last 7 days, Last 30 days, or a Custom range. Set the season start in Settings.
+
+A "night" runs 6 AM to 6 AM, so a Friday session that goes past midnight still counts as Friday.
+
+**Settings tab:** your name, your default team (pre-fills each new game), and data tools:
+
+- **Export for partner / Merge partner's file:** swap files to combine your logs. Games you both logged
+  (same result and enemy classes within 10 minutes) are skipped.
+- **Export CSV:** for spreadsheets.
+
+## Fonts
+
+Headings, tab names, table headers and the big stat numbers use WoW's UI font, Friz Quadrata, if it's
+installed on the PC. Friz Quadrata is commercial, so it isn't bundled; without it the app uses
+Marcellus, a free look-alike included under the SIL Open Font License (`FnfTracker.App/Assets/Fonts/OFL.txt`).
+Tables and form fields stay in Segoe UI for readability.
+
+## Data
+
+`%LOCALAPPDATA%\FNFTracker\fnf-data.json`, with the previous version kept as `fnf-data.bak.json` on every save.
+
+## Project layout
+
+- `FnfTracker.Core`: models, class/spec/map lists (`GameData.cs`), storage, and all stats. No Windows dependencies.
+- `FnfTracker.App`: the WPF app.
+- `Addon\FNFTracker`: the WoW addon (also embedded in the app for one-click install).
+
+When Blizzard changes specs or the map pool, edit `FnfTracker.Core/GameData.cs`.
+
+## Things to check after the first night with the addon
+
+The addon was tested against a simulated WoW API, not in the live game. After your first
+session, check that wins and losses, enemy specs, the rating change, and "Rating after" all match
+what you saw in game. If anything is off, send the file
+`World of Warcraft\_retail_\WTF\Account\<ACCOUNT>\SavedVariables\FNFTracker.lua`.
+
+## License
+
+GPL-3.0, see `LICENSE`. The bundled Marcellus font is under the SIL Open Font License (`FnfTracker.App/Assets/Fonts/OFL.txt`).
