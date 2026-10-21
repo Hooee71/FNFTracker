@@ -21,12 +21,17 @@
         <Style x:Key="CenterCellText" TargetType="TextBlock" BasedOn="{StaticResource CellText}">
             <Setter Property="HorizontalAlignment" Value="Center" />
         </Style>
-        <!-- Enemy names in the Matches grid: dim like plain text until hovered, then underlined. -->
+        <!-- Enemy names in the Matches grid: dim like plain text until hovered, then underlined.
+             On the selected row they take the row's selection text colour so the highlight doesn't wash
+             them out (hover still wins, since it's the later trigger). -->
         <Style x:Key="ProfileLink" TargetType="Hyperlink">
             <Setter Property="Foreground" Value="#B3D8DAE0" />
             <Setter Property="TextDecorations" Value="{x:Null}" />
             <Setter Property="Cursor" Value="Hand" />
             <Style.Triggers>
+                <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=DataGridRow}}" Value="True">
+                    <Setter Property="Foreground" Value="{Binding Foreground, RelativeSource={RelativeSource AncestorType=DataGridCell}}" />
+                </DataTrigger>
                 <Trigger Property="IsMouseOver" Value="True">
                     <Setter Property="Foreground" Value="#E6B450" />
                     <Setter Property="TextDecorations" Value="Underline" />
