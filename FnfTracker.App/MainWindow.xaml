@@ -37,9 +37,12 @@
         <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
             <Setter Property="FontFamily" Value="{DynamicResource HeadingFont}" />
         </Style>
-        <!-- Header for the centred Matches columns, so the title sits over its values. -->
+        <!-- Header for the centred Matches columns, so the title sits over its values.
+             The Fluent header keeps a slot on the right for the sort arrow even while it's hidden
+             (~14px: 4+2 margin + 8px glyph), so pad the left by the same to centre the title for real. -->
         <Style x:Key="CenterHeader" TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
             <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="Padding" Value="18,0,4,0" />
         </Style>
         <!-- Title bar buttons: flat, gold on hover, crimson for close. -->
         <Style x:Key="CaptionButton" TargetType="Button">
