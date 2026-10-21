@@ -122,6 +122,8 @@ public partial class MainWindow : Window
             _ => null,
         };
         MascotArt.Source = art;
+        // The stats art runs right to its top edge, so give it some room below the title bar.
+        MascotArt.Margin = Tabs.SelectedIndex == 1 ? new Thickness(0, 14, 0, 0) : new Thickness(0, -10, 0, 0);
         MascotArt.Visibility = art == null ? Visibility.Collapsed : Visibility.Visible;
         if (MascotScrim != null) MascotScrim.Visibility = MascotArt.Visibility;
     }
