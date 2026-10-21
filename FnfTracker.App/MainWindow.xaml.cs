@@ -24,7 +24,7 @@ public partial class MainWindow : Window
     private Guid? _editingId;
     private List<RatingPoint> _ratingPoints = new();
     private readonly List<FileSystemWatcher> _watchers = new();
-    private ImageSource? _matchesArt, _statsArt;
+    private ImageSource? _matchesArt, _statsArt, _settingsArt;
     private DateOnly? _singleNight;   // the night shown in "Single night" mode
     private readonly Version _currentVersion =
         Updater.Normalize(typeof(MainWindow).Assembly.GetName().Version ?? new Version(0, 0, 0));
@@ -56,6 +56,7 @@ public partial class MainWindow : Window
 
         _matchesArt = LoadArt("mascots.png");
         _statsArt = LoadArt("mascots-stats.png");
+        _settingsArt = LoadArt("mascots-settings.png");
         UpdateMascotArt();
 
         RestoreWindowPlacement();
@@ -107,7 +108,7 @@ public partial class MainWindow : Window
         UpdateMascotArt();
     }
 
-    /// <summary>Matches: bull and fox. Stats: zombie and orc. Settings: no art.</summary>
+    /// <summary>Matches: bull and fox. Stats: zombie and orc. Settings: coat of arms.</summary>
     private void UpdateMascotArt()
     {
         if (MascotArt == null) return; // fires while the window is still being built
@@ -115,6 +116,7 @@ public partial class MainWindow : Window
         {
             0 => _matchesArt,
             1 => _statsArt,
+            2 => _settingsArt,
             _ => null,
         };
         MascotArt.Source = art;

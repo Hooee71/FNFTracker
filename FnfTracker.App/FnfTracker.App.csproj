@@ -28,6 +28,7 @@
     <Resource Include="Assets\fnf.ico" />
     <Resource Include="Assets\mascots.png" />
     <Resource Include="Assets\mascots-stats.png" />
+    <Resource Include="Assets\mascots-settings.png" />
     <Resource Include="Assets\background.jpg" />
     <!-- Marcellus (SIL Open Font License, see Assets\Fonts\OFL.txt): heading font when Friz Quadrata isn't installed. -->
     <Resource Include="Assets\Fonts\Marcellus-Regular.ttf" />
