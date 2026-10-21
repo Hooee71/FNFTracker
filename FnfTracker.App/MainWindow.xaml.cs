@@ -752,6 +752,8 @@ public partial class MainWindow : Window
         AddCard("Streak", s.StreakText, s.CurrentStreak > 0 ? Theme.Win : s.CurrentStreak < 0 ? Theme.Loss : Theme.Neutral);
         AddCard("Best win streak", s.BestWinStreak.ToString(), Theme.Neutral);
         AddCard("Nights", s.Nights.ToString(), Theme.Neutral);
+        AddToughestCard("Toughest DPS", Stats.ToughestSpec(ms, healers: false));
+        AddToughestCard("Toughest healer", Stats.ToughestSpec(ms, healers: true));
 
         RatingCards.Children.Clear();
         AddCard("Current rating", s.LatestRating?.ToString() ?? "-", Theme.Accent, target: RatingCards);
@@ -783,6 +785,21 @@ public partial class MainWindow : Window
 
         _ratingPoints = Stats.RatingHistory(ms);
         DrawRating();
+    }
+
+    /// <summary>"Frost Mage (38%)": green above 50%, red below, plain at exactly 50%.</summary>
+    private void AddToughestCard(string title, StatRow? row)
+    {
+        if (row is null)
+        {
+            AddCard(title, "-", Theme.Neutral,
+                    tooltip: $"Shows once you've played {Stats.ToughestMinGames}+ games against a spec.");
+            return;
+        }
+        var brush = row.WinRate > 0.5 ? Theme.Win : row.WinRate < 0.5 ? Theme.Loss : Theme.Neutral;
+        AddCard(title, $"{row.Label} ({row.WinPct})", brush,
+                tooltip: $"{row.Record} against {row.Label} over {row.Games} game(s). " +
+                         $"Specs need {Stats.ToughestMinGames}+ games to count.");
     }
 
     private void AddCard(string title, string value, Brush valueBrush,

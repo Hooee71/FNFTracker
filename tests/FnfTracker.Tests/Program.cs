@@ -27,6 +27,10 @@ Check(Stats.ByGameNumber(ms).Select(g=>g.Label).SequenceEqual(new[]{"Games 1-5",
 Check(Stats.RepeatOpponents(ms).Single().Games==6, "repeat opponent");
 Check(Stats.ByDuration(ms).First().Label=="Under 3 min", "duration order " + string.Join(",", Stats.ByDuration(ms).Select(d=>d.Label)));
 Check(Stats.ByTag(ms).Single().Label=="bad opener", "tags normalized");
+var toughDps = Stats.ToughestSpec(ms, healers: false);
+Check(toughDps?.Label=="Arms Warrior" && toughDps.Record=="4-2", "toughest DPS " + toughDps?.Label + " " + toughDps?.Record);
+Check(Stats.ToughestSpec(ms, healers: true)?.Label=="Restoration Druid", "toughest healer");
+Check(Stats.ToughestSpec(ms.Take(4), healers: true)==null, "toughest needs 5+ games");
 foreach (var (t, exp) in new[]{("4:32",272),("4m32s",272),("6",360),("272",272),("4.5",270),("5m",300)})
   Check(Stats.ParseDuration(t)==exp, $"duration '{t}' -> {Stats.ParseDuration(t)}");
 Check(Stats.FormatDuration(272)=="4:32", "format duration");

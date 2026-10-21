@@ -124,6 +124,25 @@ public static class Stats
                                           .Distinct(StringComparer.OrdinalIgnoreCase)
                                           .Select(s => (s, m.Won))));
 
+    /// <summary>Games needed against a spec before it can be called the toughest.</summary>
+    public const int ToughestMinGames = 5;
+
+    /// <summary>
+    /// The enemy healer (healers: true) or DPS spec we have the worst win rate against, among
+    /// specs we've played at least <see cref="ToughestMinGames"/> games against. Ties go to the
+    /// spec we've lost to more. Null when nothing has enough games yet.
+    /// </summary>
+    public static StatRow? ToughestSpec(IEnumerable<Match> ms, bool healers) =>
+        Group(ms.SelectMany(m => m.Enemies.Where(e => !e.IsEmpty && !string.IsNullOrWhiteSpace(e.Spec)
+                                                      && GameData.IsHealer(e) == healers)
+                                          .Select(e => e.Label)
+                                          .Distinct(StringComparer.OrdinalIgnoreCase)
+                                          .Select(s => (s, m.Won))))
+            .Where(r => r.Games >= ToughestMinGames)
+            .OrderBy(r => r.WinRate)
+            .ThenByDescending(r => r.Losses)
+            .FirstOrDefault();
+
     public static List<StatRow> ByCompType(IEnumerable<Match> ms) =>
         Group(ms.Select(m =>
         {
