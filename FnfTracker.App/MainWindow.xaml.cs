@@ -703,6 +703,8 @@ public partial class MainWindow : Window
         MmrHost.Children.Add(mmrPanel);
 
         StatTables.Children.Clear();
+        AddOutputTable("Damage & healing vs. them", "Result", Stats.OutputByResult(ms));
+        AddOutputTable("Damage & healing by enemy comp", "Comp", Stats.OutputByEnemyComp(ms));
         AddTable("Enemy comps", "Comp", Stats.ByEnemyComp(ms));
         AddTable("Enemy classes (once per game)", "Class", Stats.ByEnemyClass(ms));
         AddTable("Enemy specs", "Spec", Stats.ByEnemySpec(ms));
@@ -835,6 +837,103 @@ public partial class MainWindow : Window
 
         panel.Children.Add(grid);
         return panel;
+    }
+
+    /// <summary>
+    /// A "how outplayed were we" table: our total damage and healing as a percent above (+) or
+    /// below (-) the enemy team's. Addon games only, since the numbers come from the scoreboard.
+    /// </summary>
+    private void AddOutputTable(string title, string labelHeader, List<OutputGap> rows)
+    {
+        var panel = new StackPanel { Margin = new Thickness(0, 0, 16, 16) };
+        var heading = new TextBlock { Text = title, FontSize = 17, Margin = new Thickness(0, 6, 0, 6) };
+        heading.SetResourceReference(TextBlock.FontFamilyProperty, "HeadingFont");
+        panel.Children.Add(heading);
+
+        if (rows.Count == 0)
+        {
+            panel.Children.Add(new TextBlock
+            {
+                Text = "Nothing yet. Damage and healing come from games recorded by the FNF addon.",
+                Opacity = 0.5,
+                TextWrapping = TextWrapping.Wrap,
+                Margin = new Thickness(0, 0, 0, 8),
+            });
+            StatTables.Children.Add(panel);
+            return;
+        }
+
+        var grid = new DataGrid
+        {
+            AutoGenerateColumns = false,
+            IsReadOnly = true,
+            HeadersVisibility = DataGridHeadersVisibility.Column,
+            GridLinesVisibility = DataGridGridLinesVisibility.None,
+            SelectionMode = DataGridSelectionMode.Single,
+            CanUserResizeRows = false,
+            MaxHeight = 300,
+            ItemsSource = rows.Select(r => new OutputGapView(r)).ToList(),
+            ToolTip = "Your team's total damage and healing vs. the enemy team's, over these games.\n" +
+                      "-20% DPS = you did 20% less damage than them. Healing only counts games where\n" +
+                      "both teams brought the same number of healers.",
+        };
+        grid.Columns.Add(new DataGridTextColumn
+        {
+            Header = labelHeader,
+            Binding = new Binding(nameof(OutputGapView.Label)),
+            Width = new DataGridLength(1, DataGridLengthUnitType.Star),
+        });
+        grid.Columns.Add(new DataGridTextColumn { Header = "Games", Binding = new Binding(nameof(OutputGapView.Games)), Width = DataGridLength.Auto, MinWidth = 64 });
+        grid.Columns.Add(new DataGridTextColumn
+        {
+            Header = "W-L",
+            Binding = new Binding(nameof(OutputGapView.Record)),
+            SortMemberPath = nameof(OutputGapView.Games),
+            Width = DataGridLength.Auto,
+            MinWidth = 64,
+        });
+
+        Style Colored(string brushPath, string? tipPath = null)
+        {
+            var st = new Style(typeof(TextBlock));
+            st.Setters.Add(new Setter(TextBlock.ForegroundProperty, new Binding(brushPath)));
+            st.Setters.Add(new Setter(TextBlock.FontWeightProperty, FontWeights.SemiBold));
+            if (tipPath != null) st.Setters.Add(new Setter(FrameworkElement.ToolTipProperty, new Binding(tipPath)));
+            return st;
+        }
+        grid.Columns.Add(new DataGridTextColumn
+        {
+            Header = "DPS",
+            Binding = new Binding(nameof(OutputGapView.Dps)),
+            SortMemberPath = nameof(OutputGapView.DpsPct),
+            ElementStyle = Colored(nameof(OutputGapView.DpsBrush)),
+            Width = DataGridLength.Auto,
+            MinWidth = 64,
+        });
+        grid.Columns.Add(new DataGridTextColumn
+        {
+            Header = "HPS",
+            Binding = new Binding(nameof(OutputGapView.Hps)),
+            SortMemberPath = nameof(OutputGapView.HpsPct),
+            ElementStyle = Colored(nameof(OutputGapView.HpsBrush), nameof(OutputGapView.HpsTip)),
+            Width = DataGridLength.Auto,
+            MinWidth = 64,
+        });
+
+        // Short tables pass the mouse wheel up to the page; tall ones (at MaxHeight) scroll themselves.
+        grid.PreviewMouseWheel += (_, e) =>
+        {
+            if (e.Handled || grid.ActualHeight >= grid.MaxHeight - 1) return;
+            e.Handled = true;
+            panel.RaiseEvent(new MouseWheelEventArgs(e.MouseDevice, e.Timestamp, e.Delta)
+            {
+                RoutedEvent = MouseWheelEvent,
+                Source = grid,
+            });
+        };
+
+        panel.Children.Add(grid);
+        StatTables.Children.Add(panel);
     }
 
     private void AddTable(string title, string labelHeader, List<StatRow> rows)
@@ -1286,9 +1385,10 @@ public partial class MainWindow : Window
         if (dialog.ShowDialog(this) != true) return;
 
         static string Q(string? s) => "\"" + (s ?? "").Replace("\"", "\"\"") + "\"";
+        static string Pct(double? p) => p?.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) ?? "";
         var numbers = Stats.GameNumbers(AllMatches);
         var sb = new StringBuilder();
-        sb.AppendLine("PlayedAt,Night,GameNo,Result,Map,OurComp,Enemy1,Enemy1Name,Enemy2,Enemy2Name,RatingAfter,RatingChange,LengthSeconds,Tags,Notes,RecordedBy");
+        sb.AppendLine("PlayedAt,Night,GameNo,Result,Map,OurComp,Enemy1,Enemy1Name,Enemy2,Enemy2Name,RatingAfter,RatingChange,LengthSeconds,OurDamage,TheirDamage,OurHealing,TheirHealing,DpsVsPct,HpsVsPct,Tags,Notes,RecordedBy");
         foreach (var m in AllMatches.OrderBy(m => m.PlayedAt))
         {
             var e1 = m.Enemies.ElementAtOrDefault(0);
@@ -1299,6 +1399,9 @@ public partial class MainWindow : Window
                 Q(e1?.Label), Q(e1?.Name), Q(e2?.Label), Q(e2?.Name),
                 m.RatingAfter?.ToString() ?? "", m.RatingChange?.ToString() ?? "",
                 m.DurationSeconds?.ToString() ?? "",
+                Stats.OurDamage(m)?.ToString() ?? "", Stats.TheirDamage(m)?.ToString() ?? "",
+                Stats.OurHealing(m)?.ToString() ?? "", Stats.TheirHealing(m)?.ToString() ?? "",
+                Pct(Stats.DpsVs(m)), Pct(Stats.HpsVs(m)),
                 Q(string.Join("; ", m.Tags)), Q(m.Notes), Q(m.RecordedBy)));
         }
         File.WriteAllText(dialog.FileName, sb.ToString(), new UTF8Encoding(true));

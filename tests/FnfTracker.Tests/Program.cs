@@ -30,6 +30,38 @@ Check(Stats.ByTag(ms).Single().Label=="bad opener", "tags normalized");
 foreach (var (t, exp) in new[]{("4:32",272),("4m32s",272),("6",360),("272",272),("4.5",270),("5m",300)})
   Check(Stats.ParseDuration(t)==exp, $"duration '{t}' -> {Stats.ParseDuration(t)}");
 Check(Stats.FormatDuration(272)=="4:32", "format duration");
+// damage / healing vs. the enemy team
+{
+  var a = new List<PlayerSlot> { new() { Damage = 600_000, Healing = 50_000 }, new() { Damage = 300_000, Healing = 400_000 } };
+  var b = new List<PlayerSlot> { new() { Damage = 700_000, Healing = 0 }, new() { Damage = 500_000, Healing = 300_000 } };
+  var ourDmg = Stats.TeamTotal(a, p => p.Damage); var theirDmg = Stats.TeamTotal(b, p => p.Damage);
+  Check(ourDmg == 900_000 && theirDmg == 1_200_000, "team damage totals");
+  Check(Stats.FormatPercentVs(Stats.PercentVs(ourDmg, theirDmg)) == "-25%", "behind on damage -> " + Stats.FormatPercentVs(Stats.PercentVs(ourDmg, theirDmg)));
+  Check(Stats.FormatPercentVs(Stats.PercentVs(Stats.TeamTotal(a, p => p.Healing), Stats.TeamTotal(b, p => p.Healing))) == "+50%", "ahead on healing");
+  Check(Stats.TeamTotal(new List<PlayerSlot> { P("Rogue","Subtlety") }, p => p.Damage) == null, "no scoreboard -> no total");
+  Check(Stats.PercentVs(100, 0) == null && Stats.PercentVs(0, 0) == 0 && Stats.PercentVs(null, 5) == null, "zero / missing edges");
+  Check(Stats.FormatPercentVs(0.4) == "0%" && Stats.FormatPercentVs(-0.6) == "-1%", "rounding");
+  Check(Stats.FormatAmount(1_234_567) == "1.23M" && Stats.FormatAmount(4_120) == "4.1k", "compact amounts");
+
+  // healer-count check, and the Stats-tab aggregates
+  PlayerSlot S(string c, string sp, long d, long h) => new() { Class = c, Spec = sp, Damage = d, Healing = h };
+  var ourTeam = new List<PlayerSlot> { S("Rogue","Subtlety",500,0), S("Priest","Discipline",200,400) };
+  var dd = new List<PlayerSlot> { S("Warrior","Arms",800,50), S("Mage","Frost",600,50) };      // double DPS
+  var heals = new List<PlayerSlot> { S("Warrior","Arms",600,50), S("Druid","Restoration",100,300) };
+  var g1 = new Match { Won = false, OurTeam = ourTeam, Enemies = dd };      // 700 vs 1400 dmg
+  var g2 = new Match { Won = true, OurTeam = ourTeam, Enemies = heals };    // 700 vs 700 dmg, 400 vs 350 heal
+  var g3 = new Match { Won = true, OurTeam = us, Enemies = dd };           // no scoreboard
+  Check(!Stats.HealingComparable(g1) && Stats.HealingComparable(g2), "healer counts decide healing comparability");
+  Check(Stats.HealingComparable(new Match { OurTeam = ourTeam, Enemies = new() { P("Warrior","") , P("Mage","Frost") } }), "unknown spec -> assume comparable");
+  var byRes = Stats.OutputByResult(new[] { g1, g2, g3 });
+  Check(byRes.Select(r => r.Label).SequenceEqual(new[] { "All games", "Wins", "Losses" }), "output by result rows");
+  Check(byRes[0].Games == 2 && byRes[0].DpsGames == 2 && byRes[0].HpsGames == 1, "manual game skipped, healing only like-for-like");
+  Check(Stats.FormatPercentVs(byRes[0].DpsPct) == "-33%", "summed damage gap " + Stats.FormatPercentVs(byRes[0].DpsPct));   // 1400 vs 2100
+  Check(Stats.FormatPercentVs(byRes[1].HpsPct) == "+14%" && byRes[2].HpsPct == null, "healing gap in wins only");
+  var byComp = Stats.OutputByEnemyComp(new[] { g1, g2, g3 });
+  Check(byComp.Count == 2 && byComp[0].Label == "Arms Warrior + Frost Mage" && byComp[0].DpsPct == -50, "comp table, worst gap first");
+  Check(Stats.OutputByResult(new[] { g3 }).Count == 0, "no addon games -> empty");
+}
 // store round trip + merge dedupe
 var path = Path.Combine(Path.GetTempPath(), "fnf-test-" + Guid.NewGuid() + ".json");
 var store = new DataStore(path); store.Load();

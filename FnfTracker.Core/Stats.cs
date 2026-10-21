@@ -10,6 +10,15 @@ public sealed record StatRow(string Label, int Games, int Wins)
 
 public sealed record RatingPoint(DateTime PlayedAt, int Rating);
 
+/// <summary>
+/// Our damage and healing vs. the enemy team's over a group of games, as percent of theirs.
+/// DpsGames / HpsGames say how many games each figure is built from.
+/// </summary>
+public sealed record OutputGap(string Label, int Games, int Wins, double? DpsPct, int DpsGames, double? HpsPct, int HpsGames)
+{
+    public string Record => $"{Wins}-{Games - Wins}";
+}
+
 /// <summary>Opponent team MMR across games that recorded it (addon-imported rated games).</summary>
 public sealed record OpponentMmr(int Games, int? Highest, int? Average, int? Lowest, bool? WonVsHighest, bool? WonVsLowest);
 
@@ -261,4 +270,111 @@ public static class Stats
 
     public static string FormatDuration(int? seconds) =>
         seconds is null ? "" : $"{seconds / 60}:{seconds % 60:00}";
+
+    /// <summary>
+    /// A team's total of one scoreboard stat (damage or healing), or null when no player on
+    /// the team has it — manual games, or a scoreboard the addon couldn't read.
+    /// </summary>
+    public static long? TeamTotal(IEnumerable<PlayerSlot> team, Func<PlayerSlot, long?> stat)
+    {
+        long total = 0;
+        bool any = false;
+        foreach (var v in team.Select(stat))
+            if (v is long x) { total += x; any = true; }
+        return any ? total : null;
+    }
+
+    /// <summary>
+    /// How far ahead (+) or behind (−) our total was, as a percent of theirs: +25 means we did
+    /// 25% more. Both teams play the same length of game, so this is also the DPS / HPS gap.
+    /// Null when either side is missing, or when they did none at all and a percent of zero
+    /// means nothing.
+    /// </summary>
+    public static double? PercentVs(long? ours, long? theirs)
+    {
+        if (ours is not long o || theirs is not long t) return null;
+        if (t == 0) return o == 0 ? 0 : null;
+        return (o - t) * 100.0 / t;
+    }
+
+    public static long? OurDamage(Match m) => TeamTotal(m.OurTeam, p => p.Damage);
+    public static long? TheirDamage(Match m) => TeamTotal(m.Enemies, p => p.Damage);
+    public static long? OurHealing(Match m) => TeamTotal(m.OurTeam, p => p.Healing);
+    public static long? TheirHealing(Match m) => TeamTotal(m.Enemies, p => p.Healing);
+
+    /// <summary>True when the game has scoreboard damage/healing (addon imports).</summary>
+    public static bool HasOutput(Match m) => OurDamage(m) != null || OurHealing(m) != null;
+
+    public static double? DpsVs(Match m) => PercentVs(OurDamage(m), TheirDamage(m));
+    public static double? HpsVs(Match m) => PercentVs(OurHealing(m), TheirHealing(m));
+
+    /// <summary>
+    /// Whether healing is a like-for-like comparison: false only when every spec is known and the
+    /// teams brought a different number of healers (a healer comp out-heals double DPS by default,
+    /// which says nothing about who played better).
+    /// </summary>
+    public static bool HealingComparable(Match m)
+    {
+        var all = m.OurTeam.Concat(m.Enemies).Where(p => !p.IsEmpty).ToList();
+        if (all.Count == 0 || all.Any(p => string.IsNullOrWhiteSpace(p.Spec))) return true;
+        return m.OurTeam.Count(GameData.IsHealer) == m.Enemies.Count(GameData.IsHealer);
+    }
+
+    /// <summary>
+    /// Damage and healing gaps over a set of games, from the summed totals (so one tiny game
+    /// can't swing the average). Healing only counts games where it's like-for-like.
+    /// </summary>
+    public static OutputGap SummarizeOutput(string label, IEnumerable<Match> ms)
+    {
+        var games = ms.Where(HasOutput).ToList();
+        long? Sum(IEnumerable<Match> g, Func<Match, long?> f)
+        {
+            long t = 0; bool any = false;
+            foreach (var m in g) if (f(m) is long v) { t += v; any = true; }
+            return any ? t : null;
+        }
+        var dmg = games.Where(m => OurDamage(m) != null && TheirDamage(m) != null).ToList();
+        var heal = games.Where(m => OurHealing(m) != null && TheirHealing(m) != null && HealingComparable(m)).ToList();
+        return new OutputGap(label, games.Count, games.Count(m => m.Won),
+            PercentVs(Sum(dmg, OurDamage), Sum(dmg, TheirDamage)), dmg.Count,
+            PercentVs(Sum(heal, OurHealing), Sum(heal, TheirHealing)), heal.Count);
+    }
+
+    /// <summary>All games, then wins vs. losses: "do we lose when we get out-damaged?"</summary>
+    public static List<OutputGap> OutputByResult(IEnumerable<Match> ms)
+    {
+        var games = ms.Where(HasOutput).ToList();
+        if (games.Count == 0) return new();
+        return new()
+        {
+            SummarizeOutput("All games", games),
+            SummarizeOutput("Wins", games.Where(m => m.Won)),
+            SummarizeOutput("Losses", games.Where(m => !m.Won)),
+        };
+    }
+
+    /// <summary>The gap against each enemy comp, worst damage gap first.</summary>
+    public static List<OutputGap> OutputByEnemyComp(IEnumerable<Match> ms) =>
+        ms.Where(HasOutput)
+          .GroupBy(m => m.EnemyCompKey, StringComparer.OrdinalIgnoreCase)
+          .Select(g => SummarizeOutput(g.Key, g))
+          .OrderBy(r => r.DpsPct ?? double.MaxValue)
+          .ThenByDescending(r => r.Games)
+          .ToList();
+
+    /// <summary>"+12%", "-34%" or "0%" (a gap under half a percent rounds to even).</summary>
+    public static string FormatPercentVs(double? pct)
+    {
+        if (pct is not double p) return "";
+        var r = Math.Round(p, MidpointRounding.AwayFromZero);
+        return r > 0 ? $"+{r:0}%" : r < 0 ? $"-{-r:0}%" : "0%";
+    }
+
+    /// <summary>1234 → "1.2k", 1234567 → "1.23M", for tooltips.</summary>
+    public static string FormatAmount(double v) => v switch
+    {
+        >= 1_000_000 => (v / 1_000_000).ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) + "M",
+        >= 1_000 => (v / 1_000).ToString("0.#", System.Globalization.CultureInfo.InvariantCulture) + "k",
+        _ => v.ToString("0", System.Globalization.CultureInfo.InvariantCulture),
+    };
 }
