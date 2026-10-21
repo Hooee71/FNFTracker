@@ -160,5 +160,6 @@ Check(Stats.Summarize(Stats.Filter(again.Data.Matches, fri.AddDays(1)).ToList())
 }
 fails += ImportCheck.Run(Path.Combine(AppContext.BaseDirectory, "TestData", "SavedVariables-sample.lua"));
 fails += UpdaterCheck.Run();
+fails += WebSiteCheck.Run();
 Console.WriteLine(fails == 0 ? "ALL PASS" : $"{fails} FAILED");
 return fails;

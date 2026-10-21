@@ -490,6 +490,26 @@
                                 <Button Content="Merge partner's file…" Padding="12,5" Margin="0,0,8,8" Click="Merge_Click" />
                                 <Button Content="Export CSV…" Padding="12,5" Margin="0,0,8,8" Click="ExportCsv_Click" />
                             </WrapPanel>
+
+                            <TextBlock Text="Website" Style="{StaticResource SectionHeader}" Margin="0,24,0,6" />
+                            <TextBlock TextWrapping="Wrap" Opacity="0.75" Margin="0,0,0,4"
+                                       Text="Publish the Matches and Stats pages to a free GitHub Pages site anyone can open. Only one of you needs to set this up; the user guide walks through it." />
+                            <TextBlock Text="GitHub repo for the site (owner/name, must be public)" Style="{StaticResource FieldLabel}" Margin="0,8,0,3" />
+                            <TextBox x:Name="PublishRepoBox" ToolTip="e.g. Hooee71/fnf-stats" />
+                            <TextBlock Text="Access token (fine-grained, that repo only: Contents, Pages and Administration, read and write)"
+                                       Style="{StaticResource FieldLabel}" TextWrapping="Wrap" Margin="0,10,0,3" />
+                            <DockPanel>
+                                <Button DockPanel.Dock="Right" Content="Forget token" Padding="12,3" Margin="8,0,0,0" Click="ForgetToken_Click" />
+                                <PasswordBox x:Name="PublishTokenBox" ToolTip="Paste the token here. It's stored encrypted on this PC only, never in the file you send your partner." />
+                            </DockPanel>
+                            <TextBlock x:Name="TokenStateText" Opacity="0.6" FontSize="12" Margin="0,4,0,0" TextWrapping="Wrap" />
+                            <CheckBox x:Name="AutoPublishCheck" Content="Publish automatically when the addon brings in new games" Margin="0,8,0,0" />
+                            <WrapPanel Margin="0,10,0,0">
+                                <Button Content="Save website settings" Padding="12,5" Margin="0,0,8,8" Click="SavePublish_Click" />
+                                <Button x:Name="PublishNowButton" Content="Publish now" Padding="12,5" Margin="0,0,8,8" Click="Publish_Click" />
+                                <Button Content="Open site" Padding="12,5" Margin="0,0,8,8" Click="OpenSite_Click" />
+                            </WrapPanel>
+                            <TextBlock x:Name="PublishStatusText" TextWrapping="Wrap" Opacity="0.85" />
                         </StackPanel>
                     </ScrollViewer>
                 </TabItem>
@@ -497,6 +517,10 @@
 
             <!-- Bottom bar: status messages on the left, update banner on the right when one is available. -->
             <DockPanel Grid.Row="2" Margin="2,8,0,0">
+                <!-- One-click publish of the website; shown once it's set up in Settings. -->
+                <Button x:Name="PublishBarButton" DockPanel.Dock="Right" Content="Publish site" Padding="14,4" Margin="8,0,0,0"
+                        VerticalAlignment="Center" Visibility="Collapsed" Click="Publish_Click"
+                        ToolTip="Update the public Matches and Stats pages" />
                 <Border x:Name="UpdateBanner" DockPanel.Dock="Right" Visibility="Collapsed" CornerRadius="6"
                         Padding="12,4" Background="#33D8B56A" BorderBrush="#806A4A22" BorderThickness="1">
                     <StackPanel Orientation="Horizontal">

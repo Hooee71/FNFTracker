@@ -3,7 +3,8 @@
 Friday Night Fights Arena tracker with Warcraft addon.
 
 A small Windows app for logging 2v2 arena games on Thursday and Friday nights and seeing what's working.
-Everything is stored locally in one JSON file. There is no server and no login.
+Everything is stored locally in one JSON file. There is no server and no login. Optionally, the Matches and
+Stats pages can be published to a free public GitHub Pages site (see the user guide).
 
 ## Build and run
 
@@ -94,6 +95,10 @@ A "night" runs 6 AM to 6 AM, so a Friday session that goes past midnight still c
 - **Export for partner / Merge partner's file:** swap files to combine your logs. Games you both logged
   (same result and enemy classes within 10 minutes) are skipped.
 - **Export CSV:** for spreadsheets.
+- **Website:** publishes the Matches and Stats pages to a GitHub Pages repo (`WebSite.cs` builds the static
+  pages from the same `Stats` code as the app; `SitePublisher.cs` pushes them as one commit through the Git
+  Data API). Needs a public repo and a fine-grained token for it with Contents, Pages and Administration read/write; the token
+  is kept DPAPI-encrypted in `%LOCALAPPDATA%\FNFTracker\publish-token.dat`, never in `fnf-data.json`.
 
 ## Fonts
 

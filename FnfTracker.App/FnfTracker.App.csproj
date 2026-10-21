@@ -34,6 +34,11 @@
     <Resource Include="Assets\Fonts\Marcellus-Regular.ttf" />
   </ItemGroup>
 
+  <!-- DPAPI, to keep the website publishing token encrypted on disk (see PublishToken.cs). -->
+  <ItemGroup>
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="9.0.0" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\FnfTracker.Core\FnfTracker.Core.csproj" />
   </ItemGroup>

@@ -1252,6 +1252,9 @@ public partial class MainWindow : Window
         RegionBox.SelectedIndex = CheckPvp.Regions.ToList().IndexOf(CheckPvp.NormalizeRegion(Settings.Region));
         SeasonStartPicker.SelectedDate = Settings.SeasonStart;
         AutoUpdateCheck.IsChecked = Settings.CheckForUpdates;
+        PublishRepoBox.Text = Settings.PublishRepo ?? "";
+        AutoPublishCheck.IsChecked = Settings.AutoPublish;
+        RefreshPublishUi();
         RangeBox.ItemsSource = StatsRange.Options.Select(o => o.Label).ToList();
         RangeBox.SelectedIndex = Math.Max(0, StatsRange.Options.ToList().FindIndex(o => o.Kind == Settings.StatsRange));
         FromPicker.SelectedDate = Settings.StatsFrom;
@@ -1304,6 +1307,8 @@ public partial class MainWindow : Window
 
         if (result.Problems.Count > 0) Status("Addon import problem — see Settings.", error: true);
         else if (!auto || result.Added > 0) Status("Addon: " + result.Summary());
+
+        if (result.Added > 0 && Settings.AutoPublish) _ = PublishSiteAsync(auto: true);
     }
 
     private void StartWatching()
@@ -1483,5 +1488,146 @@ public partial class MainWindow : Window
         }
         File.WriteAllText(dialog.FileName, sb.ToString(), new UTF8Encoding(true));
         Status($"Exported CSV to {dialog.FileName}");
+    }
+
+    // ───────────────────────── Website ─────────────────────────
+
+    private bool _publishing;
+
+    /// <summary>Files the site pages reference, taken from the app's own Assets.</summary>
+    private static readonly (string SitePath, string Resource)[] SiteAssets =
+    {
+        (WebSite.AssetPaths.Logo, "Assets/logo.png"),
+        (WebSite.AssetPaths.Background, "Assets/background.jpg"),
+        (WebSite.AssetPaths.Font, "Assets/Fonts/Marcellus-Regular.ttf"),
+        (WebSite.AssetPaths.Icon, "Assets/fnf.ico"),
+    };
+
+    private static byte[] ReadResource(string path)
+    {
+        var info = Application.GetResourceStream(new Uri($"pack://application:,,,/{path}"))
+                   ?? throw new FileNotFoundException("Missing app resource", path);
+        using var stream = info.Stream;
+        using var copy = new MemoryStream();
+        stream.CopyTo(copy);
+        return copy.ToArray();
+    }
+
+    private void RefreshPublishUi()
+    {
+        var repo = SitePublisher.ParseRepo(Settings.PublishRepo);
+        bool ready = repo != null && PublishToken.Exists;
+        PublishBarButton.Visibility = ready ? Visibility.Visible : Visibility.Collapsed;
+        TokenStateText.Text = PublishToken.Exists
+            ? "A token is saved on this PC. Leave the box empty to keep it, or paste a new one to replace it."
+            : "No token saved yet.";
+        if (string.IsNullOrEmpty(PublishStatusText.Text))
+            PublishStatusText.Text = repo is null ? ""
+                : $"Site: {SitePublisher.SiteUrl(repo.Value.Owner, repo.Value.Repo)}" +
+                  (Settings.LastPublishedAt is DateTime t ? $"\nLast published {t:ddd MMM d, h:mm tt}." : "\nNot published yet.");
+    }
+
+    /// <summary>Saves the repo, token and auto-publish choice. False (with a message) if the repo name isn't usable.</summary>
+    private bool SavePublishSettings()
+    {
+        var text = PublishRepoBox.Text.Trim();
+        var repo = SitePublisher.ParseRepo(text);
+        if (text.Length > 0 && repo is null)
+        {
+            Status("The repo should look like owner/name, e.g. Hooee71/fnf-stats.", error: true);
+            return false;
+        }
+        Settings.PublishRepo = repo is { } r ? $"{r.Owner}/{r.Repo}" : null;
+        PublishRepoBox.Text = Settings.PublishRepo ?? "";
+        Settings.AutoPublish = AutoPublishCheck.IsChecked == true;
+        if (PublishTokenBox.Password.Trim().Length > 0)
+        {
+            try { PublishToken.Save(PublishTokenBox.Password); }
+            catch (Exception ex) { Status("Couldn't save the token: " + ex.Message, error: true); return false; }
+            PublishTokenBox.Clear();
+        }
+        if (!Persist()) return false;
+        PublishStatusText.Text = "";
+        RefreshPublishUi();
+        return true;
+    }
+
+    private void SavePublish_Click(object sender, RoutedEventArgs e)
+    {
+        if (SavePublishSettings()) Status("Website settings saved.");
+    }
+
+    private void ForgetToken_Click(object sender, RoutedEventArgs e)
+    {
+        try { PublishToken.Clear(); }
+        catch (Exception ex) { Status("Couldn't remove the token: " + ex.Message, error: true); return; }
+        PublishTokenBox.Clear();
+        RefreshPublishUi();
+        Status("Token removed from this PC.");
+    }
+
+    private void OpenSite_Click(object sender, RoutedEventArgs e)
+    {
+        if (SitePublisher.ParseRepo(Settings.PublishRepo) is { } r) OpenUrl(SitePublisher.SiteUrl(r.Owner, r.Repo));
+        else Status("Set the website's repo first.", error: true);
+    }
+
+    private async void Publish_Click(object sender, RoutedEventArgs e)
+    {
+        // From the Settings tab, publish whatever is typed there (saving it first).
+        if (ReferenceEquals(sender, PublishNowButton) && !SavePublishSettings()) return;
+        await PublishSiteAsync(auto: false);
+    }
+
+    /// <summary>
+    /// Builds the site from the current data and pushes it to GitHub as one commit. Automatic
+    /// publishes stay quiet unless they fail.
+    /// </summary>
+    private async Task PublishSiteAsync(bool auto)
+    {
+        if (_publishing) return;
+        var repo = SitePublisher.ParseRepo(Settings.PublishRepo);
+        var token = PublishToken.Load();
+        if (repo is null || token is null)
+        {
+            if (!auto) Status("Set up the website (repo and token) in Settings first.", error: true);
+            return;
+        }
+
+        _publishing = true;
+        PublishNowButton.IsEnabled = PublishBarButton.IsEnabled = false;
+        PublishBarButton.Content = "Publishing…";
+        if (!auto) Status("Publishing the site…");
+        try
+        {
+            var files = WebSite.Build(_store.Data, DateTime.Now)
+                               .ToDictionary(kv => kv.Key, kv => Encoding.UTF8.GetBytes(kv.Value));
+            foreach (var (sitePath, resource) in SiteAssets) files[sitePath] = ReadResource(resource);
+
+            using var http = SitePublisher.CreateClient(_currentVersion, token);
+            var result = await SitePublisher.PublishAsync(http, repo.Value.Owner, repo.Value.Repo, files,
+                $"Update site: {AllMatches.Count} games ({DateTime.Now:yyyy-MM-dd HH:mm})");
+
+            Settings.LastPublishedAt = DateTime.Now;
+            Persist();
+            var what = result.Changed ? "Site published" : "Site already up to date";
+            PublishStatusText.Text = $"{what} {DateTime.Now:h:mm tt}: {result.SiteUrl}" +
+                                     (result.Changed ? "\nGitHub usually shows the change within a minute or two." : "") +
+                                     (result.PagesNote is null ? "" : "\n" + result.PagesNote);
+            if (result.PagesNote != null) Status(result.PagesNote, error: true);
+            else if (!auto) Status($"{what}: {result.SiteUrl}");
+        }
+        catch (Exception ex)
+        {
+            var msg = ex is PublishException ? ex.Message : "Publish failed: " + ex.Message;
+            PublishStatusText.Text = msg;
+            Status(auto ? "Auto-publish failed: " + msg : msg, error: true);
+        }
+        finally
+        {
+            _publishing = false;
+            PublishNowButton.IsEnabled = PublishBarButton.IsEnabled = true;
+            PublishBarButton.Content = "Publish site";
+        }
     }
 }
