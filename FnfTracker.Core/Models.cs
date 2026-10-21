@@ -106,6 +106,22 @@ public sealed class AppSettings
 
     /// <summary>Where the window was last time the app closed.</summary>
     public WindowPlacement? Window { get; set; }
+
+    /// <summary>Matches table column widths, order and sort, as the user left them.</summary>
+    public List<ColumnLayout>? MatchColumns { get; set; }
+}
+
+public sealed class ColumnLayout
+{
+    /// <summary>Column header text — the stable key. Columns that no longer exist are ignored.</summary>
+    public string Header { get; set; } = "";
+    public int DisplayIndex { get; set; }
+    /// <summary>Width value; its meaning depends on <see cref="WidthUnit"/>.</summary>
+    public double Width { get; set; }
+    /// <summary>"Pixel", "Star" or "Auto" (Auto keeps the column's default sizing).</summary>
+    public string WidthUnit { get; set; } = "Auto";
+    /// <summary>"Ascending" or "Descending" on the sorted column; null on the others.</summary>
+    public string? Sort { get; set; }
 }
 
 public sealed class WindowPlacement

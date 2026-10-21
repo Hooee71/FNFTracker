@@ -179,6 +179,7 @@
                                   AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single"
                                   HeadersVisibility="Column" GridLinesVisibility="Horizontal"
                                   CanUserResizeRows="False"
+                                  Sorting="MatchesGrid_Sorting"
                                   SelectionChanged="MatchesGrid_SelectionChanged">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Night" Binding="{Binding Night}" SortMemberPath="PlayedAt" Width="Auto" MinWidth="44" ElementStyle="{StaticResource CellText}" />
@@ -230,7 +231,6 @@
                                 <!-- Fixed-content columns size to fit both header (heading font + sort arrow) and cells. -->
                             <DataGridTextColumn Header="Their MMR" Binding="{Binding EnemyMmr}" Width="Auto" MinWidth="44" ElementStyle="{StaticResource CellText}" />
                                 <DataGridTextColumn Header="Length" Binding="{Binding Duration}" Width="Auto" MinWidth="44" ElementStyle="{StaticResource CellText}" />
-                                <DataGridTextColumn Header="Notes" Binding="{Binding Notes}" Width="1.5*" MinWidth="110" ElementStyle="{StaticResource CellText}" />
                             </DataGrid.Columns>
                         </DataGrid>
 

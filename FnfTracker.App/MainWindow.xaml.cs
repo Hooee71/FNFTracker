@@ -60,6 +60,7 @@ public partial class MainWindow : Window
         UpdateMascotArt();
 
         RestoreWindowPlacement();
+        RestoreMatchColumns();
         Closing += (_, _) => SaveWindowPlacement();
         Loaded += (_, _) => Window_StateChanged(this, EventArgs.Empty); // sync title bar if we start maximized
 
@@ -298,6 +299,7 @@ public partial class MainWindow : Window
         // RestoreBounds is the normal-size rectangle even while maximized or minimized.
         var b = WindowState == WindowState.Normal ? new Rect(Left, Top, ActualWidth, ActualHeight) : RestoreBounds;
         if (_skipSaveOnClose || b.IsEmpty || b.Width <= 0) return;
+        CaptureMatchColumns();
         Settings.Window = new WindowPlacement
         {
             Left = b.Left,
@@ -310,6 +312,78 @@ public partial class MainWindow : Window
         try { _store.Save(); } catch { /* closing anyway; a lost window size isn't worth a popup */ }
     }
 
+    // ───────────────────────── Matches table columns ─────────────────────────
+
+    private static string ColumnKey(DataGridColumn c) => c.Header?.ToString() ?? "";
+
+    private void CaptureMatchColumns()
+    {
+        Settings.MatchColumns = MatchesGrid.Columns.Select(c => new ColumnLayout
+        {
+            Header = ColumnKey(c),
+            DisplayIndex = c.DisplayIndex,
+            // A column the user dragged wider is Pixel; untouched Auto columns stay Auto so they keep fitting their content.
+            Width = c.Width.IsAuto ? 0 : c.Width.Value,
+            WidthUnit = c.Width.IsStar ? "Star" : c.Width.IsAbsolute ? "Pixel" : "Auto",
+            Sort = c.SortDirection?.ToString(),
+        }).ToList();
+    }
+
+    private void RestoreMatchColumns()
+    {
+        var saved = Settings.MatchColumns;
+        if (saved is null || saved.Count == 0) return;
+        try
+        {
+            var byKey = MatchesGrid.Columns.ToDictionary(ColumnKey);
+            foreach (var l in saved)
+            {
+                if (!byKey.TryGetValue(l.Header, out var col)) continue; // a column that's since been removed
+                if (l.WidthUnit == "Pixel" && l.Width > 0)
+                    col.Width = new DataGridLength(Math.Max(col.MinWidth, l.Width));
+                else if (l.WidthUnit == "Star" && l.Width > 0)
+                    col.Width = new DataGridLength(l.Width, DataGridLengthUnitType.Star);
+            }
+
+            // Reapply the order front to back so each move lands where it was.
+            int last = MatchesGrid.Columns.Count - 1;
+            foreach (var l in saved.OrderBy(l => l.DisplayIndex))
+                if (byKey.TryGetValue(l.Header, out var col))
+                    col.DisplayIndex = Math.Clamp(l.DisplayIndex, 0, last);
+
+            var sorted = saved.FirstOrDefault(l => l.Sort != null && byKey.ContainsKey(l.Header));
+            if (sorted != null && Enum.TryParse<System.ComponentModel.ListSortDirection>(sorted.Sort, out var dir))
+                _matchSort = (byKey[sorted.Header], dir);
+        }
+        catch { /* a bad saved layout just means default columns */ }
+    }
+
+    /// <summary>The Matches sort the user picked; reapplied whenever the rows are rebuilt.</summary>
+    private (DataGridColumn Column, System.ComponentModel.ListSortDirection Direction)? _matchSort;
+
+    private void ApplyMatchSort()
+    {
+        foreach (var c in MatchesGrid.Columns) c.SortDirection = null;
+        var view = CollectionViewSource.GetDefaultView(MatchesGrid.ItemsSource);
+        if (view is null) return;
+        view.SortDescriptions.Clear();
+        if (_matchSort is not { } s) return;
+        var path = s.Column.SortMemberPath;
+        if (string.IsNullOrEmpty(path)) return;
+        view.SortDescriptions.Add(new System.ComponentModel.SortDescription(path, s.Direction));
+        s.Column.SortDirection = s.Direction;
+    }
+
+    private void MatchesGrid_Sorting(object sender, DataGridSortingEventArgs e)
+    {
+        // Let the grid sort as usual, then remember it so a refresh (new game, edit, import) keeps it.
+        Dispatcher.InvokeAsync(() =>
+        {
+            var col = MatchesGrid.Columns.FirstOrDefault(c => c.SortDirection != null);
+            _matchSort = col is null ? null : (col, col.SortDirection!.Value);
+        }, DispatcherPriority.Background);
+    }
+
     // ───────────────────────── Refresh ─────────────────────────
 
     private void Refresh()
@@ -320,6 +394,7 @@ public partial class MainWindow : Window
             .OrderByDescending(m => m.PlayedAt)
             .Select(m => new MatchRow(m, numbers[m.Id], Settings))
             .ToList();
+        ApplyMatchSort();
         _busy = false;
 
         RefreshHeader();

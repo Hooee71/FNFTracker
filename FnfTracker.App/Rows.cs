@@ -42,15 +42,6 @@ public sealed class MatchRow
     public Brush ChangeBrush => Match.RatingChange is int c && c < 0 ? Theme.Loss : Theme.Win;
     public int? EnemyMmr => Match.EnemyMmr;
     public string Duration => Stats.FormatDuration(Match.DurationSeconds);
-
-    public string Notes
-    {
-        get
-        {
-            var tags = Match.Tags.Count > 0 ? "[" + string.Join(", ", Match.Tags) + "] " : "";
-            return (tags + Match.Notes).Replace('\n', ' ');
-        }
-    }
 }
 
 /// <summary>One line in a simple value table (e.g. MMR: Highest / Average / Lowest).</summary>
