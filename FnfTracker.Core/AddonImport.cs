@@ -175,18 +175,24 @@ public static class AddonImport
         var theirs = players.Where(p => p.Int("team") is int t && t != myTeam).ToList();
         if (theirs.Count == 0) { skip = SkipReason.NoTeam; return null; }
 
+        // Backups for when the scoreboard hides a spec: enemies as seen at the gates,
+        // and our side as read by the addon (your own spec + your partner's inspect data).
         var prep = rec.Tables("prep").ToList();
-        var usedPrep = new HashSet<LuaTable>();
+        var teamTable = rec.Table("team");
+        var team = new[] { teamTable?.Table("me"), teamTable?.Table("partner") }.OfType<LuaTable>().ToList();
+        var used = new HashSet<LuaTable>();
+        bool SameClass(LuaTable x, string cls) =>
+            string.Equals(GameData.ClassFromToken(x.Str("class")), cls, StringComparison.OrdinalIgnoreCase);
         PlayerSlot Slot(LuaTable p, bool enemy)
         {
             var cls = GameData.ClassFromToken(p.Str("class")) ?? p.Str("class") ?? "";
             var spec = p.Str("spec");
-            if (string.IsNullOrWhiteSpace(spec) && enemy)
+            if (string.IsNullOrWhiteSpace(spec))
             {
-                // Scoreboard hid the spec: fall back to what we saw at the gates.
-                var hit = prep.FirstOrDefault(x => !usedPrep.Contains(x)
-                    && string.Equals(GameData.ClassFromToken(x.Str("class")), cls, StringComparison.OrdinalIgnoreCase));
-                if (hit != null) { usedPrep.Add(hit); spec = hit.Str("spec"); }
+                var pool = enemy ? prep : team;
+                var hit = (enemy ? null : pool.FirstOrDefault(x => !used.Contains(x) && SameName(x.Str("name"), p.Str("name")) && SameClass(x, cls)))
+                          ?? pool.FirstOrDefault(x => !used.Contains(x) && SameClass(x, cls));
+                if (hit != null) { used.Add(hit); spec = hit.Str("spec"); }
             }
             return new PlayerSlot
             {
@@ -231,6 +237,15 @@ public static class AddonImport
         };
         if (!rated) match.Tags.Add("skirmish");
         return match;
+    }
+
+    /// <summary>"Buddy" and "Buddy-Area52" are the same player; the scoreboard drops your own realm.</summary>
+    private static bool SameName(string? a, string? b)
+    {
+        if (string.IsNullOrEmpty(a) || string.IsNullOrEmpty(b)) return false;
+        if (string.Equals(a, b, StringComparison.OrdinalIgnoreCase)) return true;
+        if (a.Contains('-') && b.Contains('-')) return false;
+        return string.Equals(a.Split('-')[0], b.Split('-')[0], StringComparison.OrdinalIgnoreCase);
     }
 
     public static string ExternalIdOf(LuaTable rec) =>

@@ -29,8 +29,6 @@ public sealed class DataStore
     public void Load()
     {
         Data = File.Exists(FilePath) ? ReadFile(FilePath) : new FnfData();
-        Data.Settings.DefaultTeam ??= new();
-        while (Data.Settings.DefaultTeam.Count < 2) Data.Settings.DefaultTeam.Add(new PlayerSlot());
     }
 
     /// <summary>

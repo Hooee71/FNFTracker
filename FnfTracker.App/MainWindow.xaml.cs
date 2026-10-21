@@ -316,6 +316,7 @@ public partial class MainWindow : Window
 
         RefreshHeader();
         RefreshStats();
+        RefreshTeamPicks();
     }
 
     private void RefreshHeader()
@@ -358,8 +359,7 @@ public partial class MainWindow : Window
         TagsBox.Text = "";
         NotesBox.Text = "";
         PlayedAtBox.Text = DateTime.Now.ToString(TimeFormat);
-        Our1.Slot = Settings.DefaultTeam.ElementAtOrDefault(0) ?? new PlayerSlot();
-        Our2.Slot = Settings.DefaultTeam.ElementAtOrDefault(1) ?? new PlayerSlot();
+        PrefillOurTeam();
 
         _busy = true;
         MatchesGrid.SelectedItem = null;
@@ -387,6 +387,47 @@ public partial class MainWindow : Window
         PlayedAtBox.Text = m.PlayedAt.ToString(TimeFormat);
         Our1.Slot = m.OurTeam.ElementAtOrDefault(0) ?? new PlayerSlot();
         Our2.Slot = m.OurTeam.ElementAtOrDefault(1) ?? new PlayerSlot();
+    }
+
+    // Comp key of the team we pre-filled, so a later refresh (e.g. an addon import) can
+    // move it to the newest team without clobbering a team you picked yourself.
+    private string? _prefilledTeamKey;
+
+    private void PrefillOurTeam()
+    {
+        SetOurTeam(Stats.LastTeam(AllMatches));
+        _prefilledTeamKey = CurrentOurTeamKey();
+    }
+
+    private void SetOurTeam(IReadOnlyList<PlayerSlot> team)
+    {
+        Our1.Slot = team.ElementAtOrDefault(0)?.Clone() ?? new PlayerSlot();
+        Our2.Slot = team.ElementAtOrDefault(1)?.Clone() ?? new PlayerSlot();
+    }
+
+    private string CurrentOurTeamKey() => Comp.Key(new[] { Our1.Slot, Our2.Slot });
+
+    /// <summary>One button per comp we've played lately; only shown when there's more than one.</summary>
+    private void RefreshTeamPicks()
+    {
+        OurTeamPicks.Children.Clear();
+        var teams = Stats.RecentTeams(AllMatches);
+        foreach (var team in teams)
+        {
+            var button = new Button
+            {
+                Content = Comp.Key(team),
+                Padding = new Thickness(10, 3, 10, 3),
+                Margin = new Thickness(0, 0, 6, 6),
+                ToolTip = "Use this team for this game",
+            };
+            button.Click += (_, _) => SetOurTeam(team);
+            OurTeamPicks.Children.Add(button);
+        }
+        OurTeamPicks.Visibility = teams.Count > 1 ? Visibility.Visible : Visibility.Collapsed;
+
+        // New-game form still showing the pre-fill? Keep it on the newest team.
+        if (_editingId is null && CurrentOurTeamKey() == _prefilledTeamKey) PrefillOurTeam();
     }
 
     private void SaveMatch()
@@ -947,8 +988,6 @@ public partial class MainWindow : Window
     {
         _busy = true;
         MyNameBox.Text = Settings.MyName;
-        DefaultSlot1.Slot = Settings.DefaultTeam.ElementAtOrDefault(0) ?? new PlayerSlot();
-        DefaultSlot2.Slot = Settings.DefaultTeam.ElementAtOrDefault(1) ?? new PlayerSlot();
         SeasonStartPicker.SelectedDate = Settings.SeasonStart;
         AutoUpdateCheck.IsChecked = Settings.CheckForUpdates;
         RangeBox.ItemsSource = StatsRange.Options.Select(o => o.Label).ToList();
@@ -962,13 +1001,7 @@ public partial class MainWindow : Window
     private void SaveSettings_Click(object sender, RoutedEventArgs e)
     {
         Settings.MyName = MyNameBox.Text.Trim();
-        Settings.DefaultTeam = new List<PlayerSlot> { DefaultSlot1.Slot, DefaultSlot2.Slot };
         if (!Persist()) return;
-        if (_editingId is null)
-        {
-            Our1.Slot = Settings.DefaultTeam[0];
-            Our2.Slot = Settings.DefaultTeam[1];
-        }
         Status("Settings saved.");
     }
 

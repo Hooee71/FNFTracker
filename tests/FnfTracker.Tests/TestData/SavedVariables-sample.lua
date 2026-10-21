@@ -204,7 +204,6 @@ FNFTrackerDB = {
 					["name"] = "Buddy",
 					["rating"] = 1800,
 					["ratingChange"] = -11,
-					["spec"] = "Discipline",
 					["team"] = 1,
 				}, -- [2]
 				{
@@ -230,6 +229,22 @@ FNFTrackerDB = {
 					["spec"] = "Discipline",
 					["team"] = 0,
 				}, -- [4]
+			},
+			["team"] = {
+				["me"] = {
+					["class"] = "ROGUE",
+					["name"] = "Stevo",
+					["role"] = "DAMAGER",
+					["spec"] = "Subtlety",
+					["specId"] = 261,
+				},
+				["partner"] = {
+					["class"] = "PRIEST",
+					["name"] = "Buddy",
+					["role"] = "HEALER",
+					["spec"] = "Discipline",
+					["specId"] = 256,
+				},
 			},
 			["prep"] = {
 				{

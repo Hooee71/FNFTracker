@@ -32,6 +32,31 @@ public sealed record Summary(
 /// <summary>All the numbers on the Stats tab. Pure functions over a match list.</summary>
 public static class Stats
 {
+    /// <summary>Our team from the most recent game (class + spec only), or empty if there's none.</summary>
+    public static List<PlayerSlot> LastTeam(IEnumerable<Match> matches) =>
+        matches.Where(m => m.OurTeam.Any(p => !p.IsEmpty))
+               .OrderByDescending(m => m.PlayedAt)
+               .Select(m => SpecsOnly(m.OurTeam))
+               .FirstOrDefault() ?? new();
+
+    /// <summary>
+    /// The comps we've played lately, most-played first, for the quick-pick buttons on the
+    /// match form. Only complete teams (two players with specs) count.
+    /// </summary>
+    public static List<List<PlayerSlot>> RecentTeams(IEnumerable<Match> matches, int lookback = 40, int take = 3) =>
+        matches.OrderByDescending(m => m.PlayedAt)
+               .Take(lookback)
+               .Where(m => m.OurTeam.Count == 2 && m.OurTeam.All(p => !p.IsEmpty && !string.IsNullOrWhiteSpace(p.Spec)))
+               .GroupBy(m => m.OurCompKey, StringComparer.OrdinalIgnoreCase)
+               .OrderByDescending(g => g.Count())
+               .ThenByDescending(g => g.First().PlayedAt)
+               .Take(take)
+               .Select(g => SpecsOnly(g.First().OurTeam))
+               .ToList();
+
+    private static List<PlayerSlot> SpecsOnly(IEnumerable<PlayerSlot> team) =>
+        team.Where(p => !p.IsEmpty).Select(p => new PlayerSlot { Class = p.Class, Spec = p.Spec }).ToList();
+
     public static IEnumerable<Match> Filter(IEnumerable<Match> matches, DateTime? since) =>
         since is null ? matches : matches.Where(m => m.Night >= DateOnly.FromDateTime(since.Value));
 

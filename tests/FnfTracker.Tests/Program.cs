@@ -36,7 +36,15 @@ var store = new DataStore(path); store.Load();
 foreach (var m in ms) store.Upsert(m);
 store.Save(); store.Save(); // second save exercises File.Replace + backup
 var again = new DataStore(path); again.Load();
-Check(again.Data.Matches.Count==13 && again.Data.Settings.DefaultTeam.Count==2, "round trip");
+Check(again.Data.Matches.Count==13, "round trip");
+{
+  // Files saved before Default team was removed still load.
+  var oldPath = Path.Combine(Path.GetTempPath(), "fnf-old-" + Guid.NewGuid() + ".json");
+  File.WriteAllText(oldPath, "{\"Settings\":{\"MyName\":\"Steve\",\"DefaultTeam\":[{\"Class\":\"Rogue\",\"Spec\":\"Subtlety\"},{}]},\"Matches\":[]}");
+  var old = new DataStore(oldPath); old.Load();
+  Check(old.Data.Settings.MyName == "Steve", "old file with DefaultTeam loads");
+  File.Delete(oldPath);
+}
 Check(File.Exists(Path.Combine(Path.GetDirectoryName(path)!, Path.GetFileNameWithoutExtension(path)+".bak.json")), "backup written");
 var friend = new FnfData();
 friend.Matches.Add(new Match { PlayedAt = ms[3].PlayedAt.AddMinutes(1), Won = ms[3].Won, Enemies = new(){ P("Druid","Restoration"), P("Warrior","Arms") } }); // same game logged by friend
@@ -82,6 +90,22 @@ Check(Stats.Summarize(Stats.Filter(again.Data.Matches, fri.AddDays(1)).ToList())
   Check(StatsRange.StepNight(games, new DateOnly(2026,10,17), +1) == null, "no later night");
   Check(StatsRange.Describe(new DateOnly(2026,10,16), new DateOnly(2026,10,16)) == "Fri Oct 16", "describe single");
   Check(StatsRange.Describe(null, null) == "All games", "describe all");
+}
+{
+  // Our team: pre-fill from the last game, quick picks for recent comps.
+  var ret = new List<PlayerSlot> { P("Paladin","Retribution","Stevo"), P("Priest","Discipline","Buddy") };
+  var dh  = new List<PlayerSlot> { P("Paladin","Retribution"), P("Shaman","Restoration") };
+  var t = new List<Match> {
+    new() { PlayedAt = fri, OurTeam = ret }, new() { PlayedAt = fri.AddMinutes(5), OurTeam = ret },
+    new() { PlayedAt = fri.AddMinutes(10), OurTeam = ret }, new() { PlayedAt = fri.AddMinutes(15), OurTeam = dh },
+    new() { PlayedAt = fri.AddMinutes(20), OurTeam = new() { P("Paladin","") , P("Shaman","Restoration") } }, // spec unknown
+  };
+  var last = Stats.LastTeam(t);
+  Check(Comp.Key(last) == "Paladin + Restoration Shaman", "last team is newest game: " + Comp.Key(last));
+  Check(last.All(p => p.Name == null && p.Damage == null), "last team carries class/spec only");
+  Check(Stats.LastTeam(new List<Match>()).Count == 0, "no games, no pre-fill");
+  var picks = Stats.RecentTeams(t).Select(Comp.Key).ToList();
+  Check(picks.SequenceEqual(new[] { "Discipline Priest + Retribution Paladin", "Restoration Shaman + Retribution Paladin" }), "recent teams: " + string.Join(" | ", picks));
 }
 fails += ImportCheck.Run(Path.Combine(AppContext.BaseDirectory, "TestData", "SavedVariables-sample.lua"));
 fails += UpdaterCheck.Run();

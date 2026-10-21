@@ -241,6 +241,13 @@
                                     <local:SlotEditor x:Name="Enemy1" Header="Enemy 1" />
                                     <local:SlotEditor x:Name="Enemy2" Header="Enemy 2" />
 
+                                    <TextBlock Text="Our team" Style="{StaticResource SectionHeader}" Margin="0,12,0,4" />
+                                    <TextBlock Text="Starts as your last game's team. Click a comp to switch."
+                                               Opacity="0.6" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,6" />
+                                    <WrapPanel x:Name="OurTeamPicks" Margin="0,0,0,2" />
+                                    <local:SlotEditor x:Name="Our1" Header="Player 1" ShowName="False" />
+                                    <local:SlotEditor x:Name="Our2" Header="Player 2" ShowName="False" />
+
                                     <TextBlock Text="Map" Style="{StaticResource FieldLabel}" />
                                     <ComboBox x:Name="MapBox" IsEditable="True" />
 
@@ -274,7 +281,7 @@
                                     <TextBox x:Name="NotesBox" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="60"
                                              VerticalScrollBarVisibility="Auto" />
 
-                                    <Expander x:Name="MoreExpander" Header="Played at / our team" Margin="0,12,0,0">
+                                    <Expander x:Name="MoreExpander" Header="Played at" Margin="0,12,0,0">
                                         <StackPanel Margin="0,6,0,0">
                                             <TextBlock Text="Played at" Style="{StaticResource FieldLabel}" Margin="0,0,0,3" />
                                             <DockPanel>
@@ -282,9 +289,6 @@
                                                         Click="Now_Click" />
                                                 <TextBox x:Name="PlayedAtBox" ToolTip="yyyy-MM-dd HH:mm" />
                                             </DockPanel>
-                                            <TextBlock Text="Our team (defaults come from Settings)" Style="{StaticResource FieldLabel}" Margin="0,10,0,3" />
-                                            <local:SlotEditor x:Name="Our1" Header="Player 1" ShowName="False" />
-                                            <local:SlotEditor x:Name="Our2" Header="Player 2" ShowName="False" />
                                         </StackPanel>
                                     </Expander>
 
@@ -371,13 +375,7 @@
                             <TextBlock Text="Your name (stamped on games you record, so merged files show who logged what)"
                                        Style="{StaticResource FieldLabel}" TextWrapping="Wrap" Margin="0,0,0,3" />
                             <TextBox x:Name="MyNameBox" />
-
-                            <TextBlock Text="Default team" Style="{StaticResource SectionHeader}" />
-                            <TextBlock Text="New games start with these specs. You can still change them per game."
-                                       Opacity="0.75" TextWrapping="Wrap" Margin="0,0,0,8" />
-                            <local:SlotEditor x:Name="DefaultSlot1" Header="Player 1" ShowName="True" />
-                            <local:SlotEditor x:Name="DefaultSlot2" Header="Player 2" ShowName="True" />
-                            <Button Content="Save settings" Padding="16,6" HorizontalAlignment="Left"
+                            <Button Content="Save settings" Padding="16,6" Margin="0,10,0,0" HorizontalAlignment="Left"
                                     Click="SaveSettings_Click" />
 
                             <TextBlock Text="Updates" Style="{StaticResource SectionHeader}" Margin="0,24,0,6" />

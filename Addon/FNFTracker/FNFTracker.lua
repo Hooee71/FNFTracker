@@ -3,7 +3,9 @@ FNF Tracker addon
 
 Records each arena match into FNFTrackerDB (account-wide SavedVariables) so
 the FNF Tracker desktop app can import it. It is read-only: it never acts on
-your behalf. It only listens to events and reads the scoreboard.
+your behalf. It only listens to events and reads the scoreboard, plus your
+own spec and your partner's (the same info right-click > Inspect shows) as a
+backup in case the scoreboard hides them.
 
 WoW writes SavedVariables to disk on /reload, logout or exit, so the app
 picks up a night's games after you log off.
@@ -15,7 +17,7 @@ match ends so the final copy has the real numbers. The app does all the math.
 ]]
 
 local ADDON_NAME = ...
-local VERSION = "0.1.1"
+local VERSION = "0.1.2"
 local ICON = "|TInterface\\AddOns\\FNFTracker\\Icon:0|t"
 local TWO_V_TWO_BRACKET = 1 -- GetPersonalRatedInfo bracket index for 2v2
 
@@ -69,7 +71,58 @@ local function StartMatch()
         skirmish = Clean(Try(IsArenaSkirmish)) and true or false,
         recordedBy = playerName .. "-" .. realm,
         prep = {},
+        team = {},
     }
+end
+
+-- Spec lookups moved under C_SpecializationInfo in 11.0; use whichever this client has.
+local GetSpecIndex = (C_SpecializationInfo and C_SpecializationInfo.GetSpecialization) or GetSpecialization
+local GetSpecInfo = (C_SpecializationInfo and C_SpecializationInfo.GetSpecializationInfo) or GetSpecializationInfo
+
+local function SpecEntry(specID)
+    specID = Clean(specID)
+    if not specID or specID == 0 then return nil end
+    local _, specName, _, _, role, classFile = Try(GetSpecializationInfoByID, specID)
+    if not Clean(specName) then return nil end
+    return { specId = specID, spec = Clean(specName), class = Clean(classFile), role = Clean(role) }
+end
+
+local function FullName(unit)
+    local name, realm = Try(UnitName, unit)
+    name, realm = Clean(name), Clean(realm)
+    if not name then return nil end
+    if realm and realm ~= "" then return name .. "-" .. realm end
+    return name
+end
+
+-- Our side's specs: a backup for when the scoreboard hides them. Yours is read
+-- directly; your partner's comes from the client's inspect data, the same thing
+-- right-click > Inspect shows. Called at several points; fills what's missing.
+local MAX_INSPECT_TRIES = 3
+local function CaptureTeam()
+    if not current then return end
+    local team = current.team
+
+    if not team.me then
+        local idx = Clean(Try(GetSpecIndex))
+        local e = idx and SpecEntry((Try(GetSpecInfo, idx)))
+        if e then
+            e.name = FullName("player")
+            team.me = e
+        end
+    end
+
+    if not team.partner and Clean(Try(UnitExists, "party1")) then
+        local e = SpecEntry((Try(GetInspectSpecialization, "party1")))
+        if e then
+            e.name = FullName("party1")
+            team.partner = e
+        elseif (current.inspectTries or 0) < MAX_INSPECT_TRIES and Clean(Try(CanInspect, "party1")) then
+            -- Not cached yet: ask once; INSPECT_READY calls us back.
+            current.inspectTries = (current.inspectTries or 0) + 1
+            Try(NotifyInspect, "party1")
+        end
+    end
 end
 
 -- Before the gates open: enemy specs. Backup in case the scoreboard hides them.
@@ -88,6 +141,7 @@ local function CaptureSpecs()
             }
         end
     end
+    CaptureTeam()
 end
 
 local function IsMe(scoreName)
@@ -147,6 +201,7 @@ local function CaptureScoreboard()
     rec.duration = current.duration or Clean(Try(C_PvP.GetActiveMatchDuration))
     rec.players = players
     rec.prep = current.prep
+    rec.team = current.team
     rec.hiddenFields = hidden > 0 and hidden or nil
     lastRecord = rec
 
@@ -162,6 +217,7 @@ local function OnMatchComplete(winner, duration)
     current.winner = Clean(winner)
     current.duration = Clean(duration)
     current.rated = (Clean(Try(C_PvP.IsRatedArena)) and true) or current.rated
+    CaptureTeam()
     Try(RequestBattlefieldScoreData)
     CaptureScoreboard()
     -- Re-read a few times: rating changes and un-hidden values arrive late.
@@ -188,6 +244,7 @@ end
 local function OnZoneChange()
     if InArena() then
         if not current then StartMatch() end
+        CaptureTeam()
     elseif current then
         -- 4 players = 2v2; the rating we read afterwards is the 2v2 bracket's.
         if current.record and current.rated and #(current.record.players or {}) == 4 then
@@ -231,6 +288,8 @@ frame:RegisterEvent("ARENA_PREP_OPPONENT_SPECIALIZATIONS")
 frame:RegisterEvent("PVP_MATCH_COMPLETE")
 frame:RegisterEvent("UPDATE_BATTLEFIELD_SCORE")
 frame:RegisterEvent("PVP_RATED_STATS_UPDATE")
+frame:RegisterEvent("GROUP_ROSTER_UPDATE")
+frame:RegisterEvent("INSPECT_READY")
 
 frame:SetScript("OnEvent", function(_, event, ...)
     if event == "ADDON_LOADED" then
@@ -245,6 +304,8 @@ frame:SetScript("OnEvent", function(_, event, ...)
         CaptureScoreboard()
     elseif event == "PVP_RATED_STATS_UPDATE" then
         CaptureRatingAfter()
+    elseif event == "GROUP_ROSTER_UPDATE" or event == "INSPECT_READY" then
+        if current then CaptureTeam() end
     end
 end)
 

@@ -78,9 +78,6 @@ public sealed class AppSettings
     /// <summary>Who is running this copy of the app (stamped on matches as RecordedBy).</summary>
     public string MyName { get; set; } = "";
 
-    /// <summary>Default team used to pre-fill new matches.</summary>
-    public List<PlayerSlot> DefaultTeam { get; set; } = new() { new PlayerSlot(), new PlayerSlot() };
-
     /// <summary>Start of the current PvP season, for the "This season" range and the header record.</summary>
     public DateTime? SeasonStart { get; set; }
 
