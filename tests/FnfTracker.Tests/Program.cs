@@ -107,6 +107,21 @@ Check(Stats.Summarize(Stats.Filter(again.Data.Matches, fri.AddDays(1)).ToList())
   var picks = Stats.RecentTeams(t).Select(Comp.Key).ToList();
   Check(picks.SequenceEqual(new[] { "Discipline Priest + Retribution Paladin", "Restoration Shaman + Retribution Paladin" }), "recent teams: " + string.Join(" | ", picks));
 }
+{
+  // check-pvp.fr profile links
+  Check(CheckPvp.ProfileUrl("Bonk-Area52", null, "us") == "https://check-pvp.fr/us/Area%2052/Bonk", "link cross-realm: " + CheckPvp.ProfileUrl("Bonk-Area52", null, "us"));
+  Check(CheckPvp.ProfileUrl("Treehug", "Illidan", "us") == "https://check-pvp.fr/us/Illidan/Treehug", "link same realm uses home realm");
+  Check(CheckPvp.ProfileUrl("Treehug", null, "us") == null, "no realm, no link");
+  Check(CheckPvp.ProfileUrl(null, "Illidan", "us") == null && CheckPvp.ProfileUrl("  ", "Illidan", "us") == null, "no name, no link");
+  Check(CheckPvp.ProfileUrl("Bonk-Illidan", "Stormrage", "EU") == "https://check-pvp.fr/eu/Illidan/Bonk", "own realm beats home realm; region lowercased");
+  Check(CheckPvp.ProfileUrl("Bonk-Illidan", null, "xx")!.StartsWith("https://check-pvp.fr/us/"), "unknown region falls back to us");
+  Check(CheckPvp.DisplayRealm("Blade'sEdge") == "Blade's Edge", "realm table: " + CheckPvp.DisplayRealm("Blade'sEdge"));
+  Check(CheckPvp.DisplayRealm("AeriePeak") == "Aerie Peak", "aerie peak");
+  Check(CheckPvp.DisplayRealm("area 52") == "Area 52" && CheckPvp.DisplayRealm("AREA52") == "Area 52", "loose realm match");
+  Check(CheckPvp.DisplayRealm("MadeUpRealm9") == "Made Up Realm 9", "unknown realm spaced out: " + CheckPvp.DisplayRealm("MadeUpRealm9"));
+  Check(CheckPvp.ProfileUrl("Ñoño-Ragnaros", null, "eu") == "https://check-pvp.fr/eu/Ragnaros/%C3%91o%C3%B1o", "non-ASCII name encoded");
+  Check(CheckPvp.RealmOf("Stevo-Area52") == "Area52" && CheckPvp.RealmOf("Steve") == null, "realm of recordedBy");
+}
 fails += ImportCheck.Run(Path.Combine(AppContext.BaseDirectory, "TestData", "SavedVariables-sample.lua"));
 fails += UpdaterCheck.Run();
 Console.WriteLine(fails == 0 ? "ALL PASS" : $"{fails} FAILED");

@@ -250,6 +250,12 @@ public partial class MainWindow : Window
         Persist();
     }
 
+    private void ProfileLink_RequestNavigate(object sender, System.Windows.Navigation.RequestNavigateEventArgs e)
+    {
+        OpenUrl(e.Uri.OriginalString);
+        e.Handled = true;
+    }
+
     private static void OpenUrl(string url)
     {
         try { Process.Start(new ProcessStartInfo(url) { UseShellExecute = true }); }
@@ -312,7 +318,7 @@ public partial class MainWindow : Window
         _busy = true;
         MatchesGrid.ItemsSource = AllMatches
             .OrderByDescending(m => m.PlayedAt)
-            .Select(m => new MatchRow(m, numbers[m.Id]))
+            .Select(m => new MatchRow(m, numbers[m.Id], Settings))
             .ToList();
         _busy = false;
 
@@ -990,6 +996,9 @@ public partial class MainWindow : Window
     {
         _busy = true;
         MyNameBox.Text = Settings.MyName;
+        HomeRealmBox.Text = Settings.HomeRealm ?? "";
+        RegionBox.ItemsSource = CheckPvp.Regions.Select(r => r.ToUpperInvariant()).ToList();
+        RegionBox.SelectedIndex = CheckPvp.Regions.ToList().IndexOf(CheckPvp.NormalizeRegion(Settings.Region));
         SeasonStartPicker.SelectedDate = Settings.SeasonStart;
         AutoUpdateCheck.IsChecked = Settings.CheckForUpdates;
         RangeBox.ItemsSource = StatsRange.Options.Select(o => o.Label).ToList();
@@ -1003,7 +1012,11 @@ public partial class MainWindow : Window
     private void SaveSettings_Click(object sender, RoutedEventArgs e)
     {
         Settings.MyName = MyNameBox.Text.Trim();
+        var realm = HomeRealmBox.Text.Trim();
+        Settings.HomeRealm = realm.Length == 0 ? null : realm;
+        Settings.Region = RegionBox.SelectedIndex >= 0 ? CheckPvp.Regions[RegionBox.SelectedIndex] : CheckPvp.DefaultRegion;
         if (!Persist()) return;
+        Refresh(); // profile links depend on realm and region
         Status("Settings saved.");
     }
 

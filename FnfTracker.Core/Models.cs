@@ -78,6 +78,15 @@ public sealed class AppSettings
     /// <summary>Who is running this copy of the app (stamped on matches as RecordedBy).</summary>
     public string MyName { get; set; } = "";
 
+    /// <summary>check-pvp.fr region for enemy profile links: "us", "eu", "kr" or "tw".</summary>
+    public string Region { get; set; } = CheckPvp.DefaultRegion;
+
+    /// <summary>
+    /// Your realm. The scoreboard leaves the realm off players on your own realm, so their
+    /// profile links use this when the game doesn't say who recorded it.
+    /// </summary>
+    public string? HomeRealm { get; set; }
+
     /// <summary>Start of the current PvP season, for the "This season" range and the header record.</summary>
     public DateTime? SeasonStart { get; set; }
 

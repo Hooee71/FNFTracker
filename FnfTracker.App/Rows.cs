@@ -1,19 +1,29 @@
+using System.Windows;
 using System.Windows.Media;
 using FnfTracker.Core;
 
 namespace FnfTracker.App;
 
-public sealed record Chip(string Text, Brush Brush, string? Name);
+/// <summary>One enemy in the Matches grid. The name links to check-pvp.fr when we know its realm.</summary>
+public sealed record Chip(string Text, Brush Brush, string? Name, string? ProfileUrl)
+{
+    public Visibility LinkVisibility => ProfileUrl != null ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility PlainNameVisibility => ProfileUrl == null ? Visibility.Visible : Visibility.Collapsed;
+}
 
 /// <summary>One line in the Matches grid.</summary>
 public sealed class MatchRow
 {
-    public MatchRow(Match match, int gameNo)
+    public MatchRow(Match match, int gameNo, AppSettings settings)
     {
         Match = match;
         GameNo = gameNo;
+        // Addon games are stamped "Name-Realm" by whoever recorded them: that's the realm the
+        // scoreboard left off. Manual games fall back to the realm in Settings.
+        var homeRealm = CheckPvp.RealmOf(match.RecordedBy) ?? settings.HomeRealm;
         EnemyChips = match.Enemies.Where(e => !e.IsEmpty)
-                                  .Select(e => new Chip(e.Label, Theme.ForClass(e.Class), e.Name))
+                                  .Select(e => new Chip(e.Label, Theme.ForClass(e.Class), e.Name,
+                                                        CheckPvp.ProfileUrl(e.Name, homeRealm, settings.Region)))
                                   .ToList();
     }
 

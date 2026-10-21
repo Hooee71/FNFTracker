@@ -126,3 +126,5 @@ what you saw in game. If anything is off, send the file
 ## License
 
 GPL-3.0, see `LICENSE`. The bundled Marcellus font is under the SIL Open Font License (`FnfTracker.App/Assets/Fonts/OFL.txt`).
+The realm-name table for check-pvp.fr links (`FnfTracker.Core/RealmNames.cs`) is generated from
+[Check-PvP Assistant](https://github.com/Kirom/CheckPvPAssistant) by Kirom, MIT License.

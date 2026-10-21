@@ -29,6 +29,8 @@ Open the **Settings** tab.
 
 1. **Your name.** Type your name and click **Save settings**. It's stamped on games you record, so
    when we combine our logs you can tell who recorded what.
+   Below it, set **your realm and region** too: enemy names link to check-pvp.fr, and the scoreboard
+   leaves the realm off enemies on your own realm, so the app needs yours to fill that in.
 2. **WoW folder.** If WoW is in the usual place (`C:\Program Files (x86)\World of Warcraft`) this is
    already filled in. Otherwise click **Browse…** and pick the folder that *contains* `_retail_`
    (not `_retail_` itself).
@@ -122,7 +124,7 @@ Click any row in the list. Its details load into the form, the title changes to 
 ### Columns
 
 **Night** and **#** (game number in that night), **Time**, **W/L**, **Enemies** (in class colours,
-with names), **Map**, **Rating**, **+/-**, **Their MMR** (addon games only), **Length** and
+with names; click a name to open that player's check-pvp.fr profile), **Map**, **Rating**, **+/-**, **Their MMR** (addon games only), **Length** and
 **Notes**. Click a column header to sort by it.
 
 ---
