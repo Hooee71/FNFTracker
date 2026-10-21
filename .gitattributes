@@ -6,3 +6,4 @@
 *.ico binary
 *.ttf binary
 *.ps1 text eol=crlf
+*.tga binary

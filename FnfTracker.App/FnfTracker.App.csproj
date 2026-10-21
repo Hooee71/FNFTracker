@@ -20,6 +20,7 @@
   <ItemGroup>
     <EmbeddedResource Include="..\Addon\FNFTracker\FNFTracker.toc" LogicalName="FnfTracker.Addon.FNFTracker.toc" />
     <EmbeddedResource Include="..\Addon\FNFTracker\FNFTracker.lua" LogicalName="FnfTracker.Addon.FNFTracker.lua" />
+    <EmbeddedResource Include="..\Addon\FNFTracker\Icon.tga" LogicalName="FnfTracker.Addon.Icon.tga" />
   </ItemGroup>
 
   <ItemGroup>

@@ -2,7 +2,8 @@
 ## Title: FNF Tracker
 ## Notes: Records your arena results for the FNF Tracker desktop app. Passive: it only reads the end-of-match scoreboard.
 ## Author: Steve
-## Version: 0.1.0
+## IconTexture: Interface\AddOns\FNFTracker\Icon
+## Version: 0.1.1
 ## SavedVariables: FNFTrackerDB
 
 FNFTracker.lua

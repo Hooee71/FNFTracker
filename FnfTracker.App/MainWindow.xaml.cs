@@ -1084,7 +1084,7 @@ public partial class MainWindow : Window
         try
         {
             Directory.CreateDirectory(target);
-            foreach (var file in new[] { "FNFTracker.toc", "FNFTracker.lua" })
+            foreach (var file in new[] { "FNFTracker.toc", "FNFTracker.lua", "Icon.tga" })
             {
                 var resource = "FnfTracker.Addon." + file;
                 using var source = typeof(MainWindow).Assembly.GetManifestResourceStream(resource)
