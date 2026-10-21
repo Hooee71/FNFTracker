@@ -509,7 +509,21 @@
                                 Click="UpdateLater_Click" />
                     </StackPanel>
                 </Border>
-                <TextBlock x:Name="StatusText" Opacity="0.8" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                <!-- Status pill: hidden until a message arrives, then flashes in and fades away
+                     after a while. Driven by Status() in the code-behind. -->
+                <Border x:Name="StatusPill" HorizontalAlignment="Left" VerticalAlignment="Center"
+                        CornerRadius="6" Padding="10,4" BorderThickness="1" Opacity="0"
+                        Background="#33E6B450" BorderBrush="#AAE6B450">
+                    <Border.RenderTransform>
+                        <TranslateTransform x:Name="StatusPillShift" />
+                    </Border.RenderTransform>
+                    <StackPanel Orientation="Horizontal">
+                        <Ellipse x:Name="StatusDot" Width="8" Height="8" Margin="0,0,8,0"
+                                 VerticalAlignment="Center" Fill="#E6B450" />
+                        <TextBlock x:Name="StatusText" VerticalAlignment="Center" Foreground="#F2DDA8"
+                                   FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                </Border>
             </DockPanel>
 
             <!-- Mascot art: top-right, the width of the match sidebar, fading out downward.

@@ -7,6 +7,7 @@ using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using FnfTracker.Core;
@@ -173,7 +174,7 @@ public partial class MainWindow : Window
         {
             // Offline, GitHub down, rate-limited: never bother the user unless they asked.
             UpdateStatusText.Text = "Couldn't check for updates: " + ex.Message;
-            if (userAsked) Status("Couldn't check for updates. See Settings.");
+            if (userAsked) Status("Couldn't check for updates. See Settings.", error: true);
         }
     }
 
@@ -517,7 +518,7 @@ public partial class MainWindow : Window
     {
         if (WinRadio.IsChecked != true && LossRadio.IsChecked != true)
         {
-            Status("Pick Win or Loss first (Ctrl+W / Ctrl+L).");
+            Status("Pick Win or Loss first (Ctrl+W / Ctrl+L).", error: true);
             return;
         }
 
@@ -527,25 +528,25 @@ public partial class MainWindow : Window
                                   DateTimeStyles.None, out playedAt))
         {
             MoreExpander.IsExpanded = true;
-            Status($"Couldn't read 'Played at'. Use {TimeFormat}, e.g. {DateTime.Now.ToString(TimeFormat)}.");
+            Status($"Couldn't read 'Played at'. Use {TimeFormat}, e.g. {DateTime.Now.ToString(TimeFormat)}.", error: true);
             return;
         }
 
         if (!TryParseInt(RatingAfterBox.Text, out var ratingAfter))
         {
-            Status("'Rating after' should be a number, like 1840.");
+            Status("'Rating after' should be a number, like 1840.", error: true);
             return;
         }
         if (!TryParseInt(RatingChangeBox.Text, out var ratingChange))
         {
-            Status("'+/-' should be a number, like 14 or -11.");
+            Status("'+/-' should be a number, like 14 or -11.", error: true);
             return;
         }
 
         var duration = Stats.ParseDuration(DurationBox.Text);
         if (!string.IsNullOrWhiteSpace(DurationBox.Text) && duration is null)
         {
-            Status("Length: use 4:32, or 4.5 for minutes.");
+            Status("Length: use 4:32, or 4.5 for minutes.", error: true);
             return;
         }
 
@@ -618,7 +619,61 @@ public partial class MainWindow : Window
         }
     }
 
-    private void Status(string text) => StatusText.Text = text;
+    // ───────────────────────── Status bar ─────────────────────────
+
+    private static readonly TimeSpan StatusLifetime = TimeSpan.FromSeconds(15);
+    private DispatcherTimer? _statusTimer;
+
+    /// <summary>
+    /// Shows a message in the bottom bar: the pill slides in with a quick pulse so it gets noticed,
+    /// then fades out and clears after <see cref="StatusLifetime"/>. Errors show in red.
+    /// </summary>
+    private void Status(string text, bool error = false)
+    {
+        var color = (Color)ColorConverter.ConvertFromString(error ? "#E5534B" : "#E6B450");
+        StatusText.Text = text;
+        StatusText.Foreground = new SolidColorBrush(error ? Color.FromRgb(0xFF, 0xB4, 0xAE) : Color.FromRgb(0xF2, 0xDD, 0xA8));
+        StatusDot.Fill = new SolidColorBrush(color);
+        StatusPill.BorderBrush = new SolidColorBrush(Color.FromArgb(0xAA, color.R, color.G, color.B));
+
+        // Background flashes bright, then settles to a soft tint.
+        var bg = new SolidColorBrush(Color.FromArgb(0x33, color.R, color.G, color.B));
+        StatusPill.Background = bg;
+        bg.BeginAnimation(SolidColorBrush.ColorProperty, new ColorAnimation
+        {
+            From = Color.FromArgb(0xB0, color.R, color.G, color.B),
+            To = Color.FromArgb(0x33, color.R, color.G, color.B),
+            Duration = TimeSpan.FromMilliseconds(900),
+            EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut },
+        });
+
+        // Slide in from the left and fade up.
+        StatusPill.BeginAnimation(OpacityProperty,
+            new DoubleAnimation(1, TimeSpan.FromMilliseconds(200)));
+        StatusPillShift.BeginAnimation(TranslateTransform.XProperty,
+            new DoubleAnimation(-14, 0, TimeSpan.FromMilliseconds(250))
+            { EasingFunction = new BackEase { EasingMode = EasingMode.EaseOut, Amplitude = 0.4 } });
+
+        // Restart the countdown so a new message always gets its full time on screen.
+        _statusTimer ??= new DispatcherTimer();
+        _statusTimer.Stop();
+        _statusTimer.Interval = StatusLifetime;
+        _statusTimer.Tick -= StatusTimer_Tick;
+        _statusTimer.Tick += StatusTimer_Tick;
+        _statusTimer.Start();
+    }
+
+    private void StatusTimer_Tick(object? sender, EventArgs e)
+    {
+        _statusTimer?.Stop();
+        var fade = new DoubleAnimation(0, TimeSpan.FromMilliseconds(600));
+        fade.Completed += (_, _) =>
+        {
+            // A new message may have arrived during the fade; only clear if nothing replaced it.
+            if (_statusTimer is { IsEnabled: false }) StatusText.Text = "";
+        };
+        StatusPill.BeginAnimation(OpacityProperty, fade);
+    }
 
     // ───────────────────────── Form events ─────────────────────────
 
@@ -1207,7 +1262,7 @@ public partial class MainWindow : Window
         catch (Exception ex)
         {
             AddonStatusText.Text = "Import failed: " + ex.Message;
-            if (!auto) Status("Addon import failed: " + ex.Message);
+            if (!auto) Status("Addon import failed: " + ex.Message, error: true);
             return;
         }
 
@@ -1225,7 +1280,7 @@ public partial class MainWindow : Window
             AddonStatusText.Text = $"Last import {DateTime.Now:h:mm tt}: {result.Summary()}" +
                                    (result.Problems.Count > 0 ? "\n" + string.Join("\n", result.Problems) : "");
 
-        if (result.Problems.Count > 0) Status("Addon import problem — see Settings.");
+        if (result.Problems.Count > 0) Status("Addon import problem — see Settings.", error: true);
         else if (!auto || result.Added > 0) Status("Addon: " + result.Summary());
     }
 
