@@ -37,6 +37,10 @@
         <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
             <Setter Property="FontFamily" Value="{DynamicResource HeadingFont}" />
         </Style>
+        <!-- Header for the centred Matches columns, so the title sits over its values. -->
+        <Style x:Key="CenterHeader" TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+        </Style>
         <!-- Title bar buttons: flat, gold on hover, crimson for close. -->
         <Style x:Key="CaptionButton" TargetType="Button">
             <Setter Property="Width" Value="46" />
@@ -186,10 +190,10 @@
                                   Sorting="MatchesGrid_Sorting"
                                   SelectionChanged="MatchesGrid_SelectionChanged">
                             <DataGrid.Columns>
-                                <DataGridTextColumn Header="Night" Binding="{Binding Night}" SortMemberPath="PlayedAt" Width="Auto" MinWidth="44" ElementStyle="{StaticResource CenterCellText}" />
-                                <DataGridTextColumn Header="#" Binding="{Binding GameNo}" Width="Auto" MinWidth="44" ElementStyle="{StaticResource CenterCellText}" />
-                                <DataGridTextColumn Header="Time" Binding="{Binding Time}" SortMemberPath="PlayedAt" Width="Auto" MinWidth="44" ElementStyle="{StaticResource CenterCellText}" />
-                                <DataGridTextColumn Header="W/L" Binding="{Binding ResultText}" Width="Auto" MinWidth="44">
+                                <DataGridTextColumn Header="Night" HeaderStyle="{StaticResource CenterHeader}" Binding="{Binding Night}" SortMemberPath="PlayedAt" Width="Auto" MinWidth="44" ElementStyle="{StaticResource CenterCellText}" />
+                                <DataGridTextColumn Header="#" HeaderStyle="{StaticResource CenterHeader}" Binding="{Binding GameNo}" Width="Auto" MinWidth="44" ElementStyle="{StaticResource CenterCellText}" />
+                                <DataGridTextColumn Header="Time" HeaderStyle="{StaticResource CenterHeader}" Binding="{Binding Time}" SortMemberPath="PlayedAt" Width="Auto" MinWidth="44" ElementStyle="{StaticResource CenterCellText}" />
+                                <DataGridTextColumn Header="W/L" HeaderStyle="{StaticResource CenterHeader}" Binding="{Binding ResultText}" Width="Auto" MinWidth="44">
                                     <DataGridTextColumn.ElementStyle>
                                         <Style TargetType="TextBlock" BasedOn="{StaticResource CenterCellText}">
                                             <Setter Property="Foreground" Value="{Binding ResultBrush}" />
@@ -224,8 +228,8 @@
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
                                 <DataGridTextColumn Header="Map" Binding="{Binding Map}" Width="*" MinWidth="185" ElementStyle="{StaticResource CellText}" />
-                                <DataGridTextColumn Header="Rating" Binding="{Binding Rating}" Width="Auto" MinWidth="44" ElementStyle="{StaticResource CenterCellText}" />
-                                <DataGridTextColumn Header="+/-" Binding="{Binding Change}" Width="Auto" MinWidth="44">
+                                <DataGridTextColumn Header="Rating" HeaderStyle="{StaticResource CenterHeader}" Binding="{Binding Rating}" Width="Auto" MinWidth="44" ElementStyle="{StaticResource CenterCellText}" />
+                                <DataGridTextColumn Header="+/-" HeaderStyle="{StaticResource CenterHeader}" Binding="{Binding Change}" Width="Auto" MinWidth="44">
                                     <DataGridTextColumn.ElementStyle>
                                         <Style TargetType="TextBlock" BasedOn="{StaticResource CenterCellText}">
                                             <Setter Property="Foreground" Value="{Binding ChangeBrush}" />
@@ -233,8 +237,8 @@
                                     </DataGridTextColumn.ElementStyle>
                                 </DataGridTextColumn>
                                 <!-- Fixed-content columns size to fit both header (heading font + sort arrow) and cells. -->
-                            <DataGridTextColumn Header="Their MMR" Binding="{Binding EnemyMmr}" Width="Auto" MinWidth="44" ElementStyle="{StaticResource CenterCellText}" />
-                                <DataGridTextColumn Header="Length" Binding="{Binding Duration}" Width="Auto" MinWidth="44" ElementStyle="{StaticResource CenterCellText}" />
+                            <DataGridTextColumn Header="Their MMR" HeaderStyle="{StaticResource CenterHeader}" Binding="{Binding EnemyMmr}" Width="Auto" MinWidth="44" ElementStyle="{StaticResource CenterCellText}" />
+                                <DataGridTextColumn Header="Length" HeaderStyle="{StaticResource CenterHeader}" Binding="{Binding Duration}" Width="Auto" MinWidth="44" ElementStyle="{StaticResource CenterCellText}" />
                             </DataGrid.Columns>
                         </DataGrid>
 
