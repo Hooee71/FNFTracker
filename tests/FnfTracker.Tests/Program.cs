@@ -30,6 +30,19 @@ Check(Stats.ByTag(ms).Single().Label=="bad opener", "tags normalized");
 foreach (var (t, exp) in new[]{("4:32",272),("4m32s",272),("6",360),("272",272),("4.5",270),("5m",300)})
   Check(Stats.ParseDuration(t)==exp, $"duration '{t}' -> {Stats.ParseDuration(t)}");
 Check(Stats.FormatDuration(272)=="4:32", "format duration");
+// damage / healing vs. the enemy team
+{
+  var a = new List<PlayerSlot> { new() { Damage = 600_000, Healing = 50_000 }, new() { Damage = 300_000, Healing = 400_000 } };
+  var b = new List<PlayerSlot> { new() { Damage = 700_000, Healing = 0 }, new() { Damage = 500_000, Healing = 300_000 } };
+  var ourDmg = Stats.TeamTotal(a, p => p.Damage); var theirDmg = Stats.TeamTotal(b, p => p.Damage);
+  Check(ourDmg == 900_000 && theirDmg == 1_200_000, "team damage totals");
+  Check(Stats.FormatPercentVs(Stats.PercentVs(ourDmg, theirDmg)) == "-25%", "behind on damage -> " + Stats.FormatPercentVs(Stats.PercentVs(ourDmg, theirDmg)));
+  Check(Stats.FormatPercentVs(Stats.PercentVs(Stats.TeamTotal(a, p => p.Healing), Stats.TeamTotal(b, p => p.Healing))) == "+50%", "ahead on healing");
+  Check(Stats.TeamTotal(new List<PlayerSlot> { P("Rogue","Subtlety") }, p => p.Damage) == null, "no scoreboard -> no total");
+  Check(Stats.PercentVs(100, 0) == null && Stats.PercentVs(0, 0) == 0 && Stats.PercentVs(null, 5) == null, "zero / missing edges");
+  Check(Stats.FormatPercentVs(0.4) == "0%" && Stats.FormatPercentVs(-0.6) == "-1%", "rounding");
+  Check(Stats.FormatAmount(1_234_567) == "1.23M" && Stats.FormatAmount(4_120) == "4.1k", "compact amounts");
+}
 // store round trip + merge dedupe
 var path = Path.Combine(Path.GetTempPath(), "fnf-test-" + Guid.NewGuid() + ".json");
 var store = new DataStore(path); store.Load();

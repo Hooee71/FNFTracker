@@ -42,6 +42,61 @@ public sealed class MatchRow
     public Brush ChangeBrush => Match.RatingChange is int c && c < 0 ? Theme.Loss : Theme.Win;
     public int? EnemyMmr => Match.EnemyMmr;
     public string Duration => Stats.FormatDuration(Match.DurationSeconds);
+
+    // ---- Output vs. the enemy team (addon games; the scoreboard gives damage and healing) ----
+
+    private long? OurDamage => Stats.TeamTotal(Match.OurTeam, p => p.Damage);
+    private long? TheirDamage => Stats.TeamTotal(Match.Enemies, p => p.Damage);
+    private long? OurHealing => Stats.TeamTotal(Match.OurTeam, p => p.Healing);
+    private long? TheirHealing => Stats.TeamTotal(Match.Enemies, p => p.Healing);
+
+    /// <summary>Damage gap as a percent of theirs; also what the column sorts by.</summary>
+    public double? DpsVs => Stats.PercentVs(OurDamage, TheirDamage);
+    public double? HpsVs => Stats.PercentVs(OurHealing, TheirHealing);
+
+    /// <summary>The two stacked lines in the DPS/HPS column, empty for games with no scoreboard.</summary>
+    public List<OutputLine> Output
+    {
+        get
+        {
+            if (OurDamage is null && OurHealing is null) return new();
+            return new()
+            {
+                OutputLine.Make("DPS", DpsVs),
+                OutputLine.Make("HPS", HpsVs),
+            };
+        }
+    }
+
+    /// <summary>Hover text with the actual numbers behind the percentages.</summary>
+    public string? OutputTip
+    {
+        get
+        {
+            if (OurDamage is null && OurHealing is null) return null;
+            int? secs = Match.DurationSeconds;
+            string Side(long? v) => v is long x
+                ? Stats.FormatAmount(x) + (secs > 0 ? $" ({Stats.FormatAmount((double)x / secs!.Value)}/s)" : "")
+                : "?";
+            var tip = $"Damage   us {Side(OurDamage)}  ·  them {Side(TheirDamage)}\n" +
+                      $"Healing  us {Side(OurHealing)}  ·  them {Side(TheirHealing)}";
+            return secs > 0 ? tip + $"\nLength   {Duration}" : tip;
+        }
+    }
+}
+
+/// <summary>One line of the DPS/HPS column: "DPS  +12%", green ahead, red behind.</summary>
+public sealed record OutputLine(string Label, string Text, Brush Brush)
+{
+    public static OutputLine Make(string label, double? pct)
+    {
+        var text = Stats.FormatPercentVs(pct);
+        var brush = text.Length == 0 ? Theme.Dim
+                  : text.StartsWith('+') ? Theme.Win
+                  : text.StartsWith('-') ? Theme.Loss
+                  : Theme.Neutral;
+        return new(label, text.Length == 0 ? "—" : text, brush);
+    }
 }
 
 /// <summary>One line in a simple value table (e.g. MMR: Highest / Average / Lowest).</summary>

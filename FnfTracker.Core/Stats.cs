@@ -261,4 +261,46 @@ public static class Stats
 
     public static string FormatDuration(int? seconds) =>
         seconds is null ? "" : $"{seconds / 60}:{seconds % 60:00}";
+
+    /// <summary>
+    /// A team's total of one scoreboard stat (damage or healing), or null when no player on
+    /// the team has it — manual games, or a scoreboard the addon couldn't read.
+    /// </summary>
+    public static long? TeamTotal(IEnumerable<PlayerSlot> team, Func<PlayerSlot, long?> stat)
+    {
+        long total = 0;
+        bool any = false;
+        foreach (var v in team.Select(stat))
+            if (v is long x) { total += x; any = true; }
+        return any ? total : null;
+    }
+
+    /// <summary>
+    /// How far ahead (+) or behind (−) our total was, as a percent of theirs: +25 means we did
+    /// 25% more. Both teams play the same length of game, so this is also the DPS / HPS gap.
+    /// Null when either side is missing, or when they did none at all and a percent of zero
+    /// means nothing.
+    /// </summary>
+    public static double? PercentVs(long? ours, long? theirs)
+    {
+        if (ours is not long o || theirs is not long t) return null;
+        if (t == 0) return o == 0 ? 0 : null;
+        return (o - t) * 100.0 / t;
+    }
+
+    /// <summary>"+12%", "-34%" or "0%" (a gap under half a percent rounds to even).</summary>
+    public static string FormatPercentVs(double? pct)
+    {
+        if (pct is not double p) return "";
+        var r = Math.Round(p, MidpointRounding.AwayFromZero);
+        return r > 0 ? $"+{r:0}%" : r < 0 ? $"-{-r:0}%" : "0%";
+    }
+
+    /// <summary>1234 → "1.2k", 1234567 → "1.23M", for tooltips.</summary>
+    public static string FormatAmount(double v) => v switch
+    {
+        >= 1_000_000 => (v / 1_000_000).ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) + "M",
+        >= 1_000 => (v / 1_000).ToString("0.#", System.Globalization.CultureInfo.InvariantCulture) + "k",
+        _ => v.ToString("0", System.Globalization.CultureInfo.InvariantCulture),
+    };
 }

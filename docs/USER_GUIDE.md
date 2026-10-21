@@ -124,8 +124,14 @@ Click any row in the list. Its details load into the form, the title changes to 
 ### Columns
 
 **Night** and **#** (game number in that night), **Time**, **W/L**, **Enemies** (in class colours,
-with names; click a name to open that player's check-pvp.fr profile), **Map**, **Rating**, **+/-**, **Their MMR** (addon games only), **Length** and
+with names; click a name to open that player's check-pvp.fr profile), **Map**, **Rating**, **+/-**, **Their MMR** (addon games only), **DPS/HPS** and
 **Notes**. Click a column header to sort by it.
+
+**DPS/HPS** (addon games only) compares your team's total damage and healing with the enemy team's:
+`DPS -18%` means you did 18% less damage than they did. Green when you were ahead, red when you were
+behind. Both teams play the same length of game, so the gap in totals is the same as the gap in DPS
+and HPS. Hover the cell for the actual totals, per-second rates and game length. Sorting the column
+sorts by the damage gap. (Game length is still recorded and editable in the form.)
 
 ---
 
