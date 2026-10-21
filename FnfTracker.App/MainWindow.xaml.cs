@@ -124,7 +124,8 @@ public partial class MainWindow : Window
         MascotArt.Source = art;
         // Matches and Stats art sit a little lower so they don't crowd the title bar;
         // the Matches art is also a touch smaller.
-        MascotArt.Margin = Tabs.SelectedIndex is 0 or 1 ? new Thickness(0, 14, 0, 0) : new Thickness(0, -10, 0, 0);
+        // All art keeps 24px clear of the right edge so it doesn't collide with the scroll bar.
+        MascotArt.Margin = Tabs.SelectedIndex is 0 or 1 ? new Thickness(0, 14, 24, 0) : new Thickness(0, -10, 24, 0);
         MascotArt.Width = Tabs.SelectedIndex == 0 ? 350 : 390;
         MascotArt.Visibility = art == null ? Visibility.Collapsed : Visibility.Visible;
         if (MascotScrim != null) MascotScrim.Visibility = MascotArt.Visibility;
