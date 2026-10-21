@@ -130,3 +130,27 @@ public sealed class OutputGapView
     public Brush HpsBrush { get; }
     public string? HpsTip { get; }
 }
+
+/// <summary>One line in a simple value table (e.g. MMR: Highest / Average / Lowest).</summary>
+public sealed record InfoLine(string Label, string Value, string Note, Brush NoteBrush);
+
+/// <summary>One line in a Stats table.</summary>
+public sealed class StatView
+{
+    public StatView(StatRow row)
+    {
+        Label = row.Label;
+        Games = row.Games;
+        Record = row.Record;
+        WinRate = row.WinRate;
+        WinPct = row.WinPct;
+        Brush = Theme.ForWinRate(row.Games, row.WinRate);
+    }
+
+    public string Label { get; }
+    public int Games { get; }
+    public string Record { get; }
+    public double WinRate { get; }
+    public string WinPct { get; }
+    public Brush Brush { get; }
+}
