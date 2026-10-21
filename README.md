@@ -46,6 +46,8 @@ put it in a folder of its own (e.g. `C:\Games\FNFTracker`), and run it. Nothing 
 Windows may say "Windows protected your PC" the first time because the app isn't code-signed:
 click **More info → Run anyway**.
 
+The full walkthrough for players is in [docs/USER_GUIDE.md](docs/USER_GUIDE.md).
+
 After that the app updates itself: when a new version is out, a banner at the bottom offers
 **Update now**, which downloads it, checks it, and restarts into the new version. Match data is kept.
 Settings → Updates can turn off the startup check or check by hand.
