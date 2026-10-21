@@ -110,7 +110,7 @@ public partial class MainWindow : Window
         UpdateMascotArt();
     }
 
-    /// <summary>Matches: bull and fox. Stats: zombie and orc. Settings: coat of arms.</summary>
+    /// <summary>Matches: bull and fox. Stats: zombie and orc. Settings: engineer portrait.</summary>
     private void UpdateMascotArt()
     {
         if (MascotArt == null) return; // fires while the window is still being built
