@@ -15,7 +15,8 @@ match ends so the final copy has the real numbers. The app does all the math.
 ]]
 
 local ADDON_NAME = ...
-local VERSION = "0.1.0"
+local VERSION = "0.1.1"
+local ICON = "|TInterface\\AddOns\\FNFTracker\\Icon:0|t"
 local TWO_V_TWO_BRACKET = 1 -- GetPersonalRatedInfo bracket index for 2v2
 
 local current        -- the arena we're in right now
@@ -29,7 +30,7 @@ local function EnsureDB()
 end
 
 local function Print(msg)
-    DEFAULT_CHAT_FRAME:AddMessage("|cffe6b450FNF|r " .. msg)
+    DEFAULT_CHAT_FRAME:AddMessage(ICON .. " |cffe6b450FNF|r " .. msg)
 end
 
 -- Returns v unless it's a secret value (Midnight), in which case nil.
