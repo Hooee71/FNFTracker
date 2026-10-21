@@ -45,80 +45,88 @@ public sealed class MatchRow
 
     // ---- Output vs. the enemy team (addon games; the scoreboard gives damage and healing) ----
 
-    private long? OurDamage => Stats.TeamTotal(Match.OurTeam, p => p.Damage);
-    private long? TheirDamage => Stats.TeamTotal(Match.Enemies, p => p.Damage);
-    private long? OurHealing => Stats.TeamTotal(Match.OurTeam, p => p.Healing);
-    private long? TheirHealing => Stats.TeamTotal(Match.Enemies, p => p.Healing);
-
     /// <summary>Damage gap as a percent of theirs; also what the column sorts by.</summary>
-    public double? DpsVs => Stats.PercentVs(OurDamage, TheirDamage);
-    public double? HpsVs => Stats.PercentVs(OurHealing, TheirHealing);
+    public double? DpsVs => Stats.DpsVs(Match);
+    public double? HpsVs => Stats.HpsVs(Match);
 
     /// <summary>The two stacked lines in the DPS/HPS column, empty for games with no scoreboard.</summary>
-    public List<OutputLine> Output
+    public List<OutputLine> Output => !Stats.HasOutput(Match) ? new() : new()
     {
-        get
-        {
-            if (OurDamage is null && OurHealing is null) return new();
-            return new()
-            {
-                OutputLine.Make("DPS", DpsVs),
-                OutputLine.Make("HPS", HpsVs),
-            };
-        }
-    }
+        OutputLine.Make("DPS", DpsVs),
+        OutputLine.Make("HPS", HpsVs, muted: !Stats.HealingComparable(Match)),
+    };
 
     /// <summary>Hover text with the actual numbers behind the percentages.</summary>
     public string? OutputTip
     {
         get
         {
-            if (OurDamage is null && OurHealing is null) return null;
+            if (!Stats.HasOutput(Match)) return null;
             int? secs = Match.DurationSeconds;
             string Side(long? v) => v is long x
                 ? Stats.FormatAmount(x) + (secs > 0 ? $" ({Stats.FormatAmount((double)x / secs!.Value)}/s)" : "")
                 : "?";
-            var tip = $"Damage   us {Side(OurDamage)}  ·  them {Side(TheirDamage)}\n" +
-                      $"Healing  us {Side(OurHealing)}  ·  them {Side(TheirHealing)}";
-            return secs > 0 ? tip + $"\nLength   {Duration}" : tip;
+            var tip = $"Damage   us {Side(Stats.OurDamage(Match))}  ·  them {Side(Stats.TheirDamage(Match))}\n" +
+                      $"Healing  us {Side(Stats.OurHealing(Match))}  ·  them {Side(Stats.TheirHealing(Match))}";
+            if (secs > 0) tip += $"\nLength   {Duration}";
+            if (!Stats.HealingComparable(Match))
+                tip += "\n\nHealing is greyed out: the teams brought a different number of healers, so it isn't a like-for-like comparison.";
+            return tip;
         }
     }
 }
 
-/// <summary>One line of the DPS/HPS column: "DPS  +12%", green ahead, red behind.</summary>
-public sealed record OutputLine(string Label, string Text, Brush Brush)
+/// <summary>
+/// One line of the DPS/HPS column: "DPS  +12%" with a small bar growing right (green, ahead) or
+/// left (red, behind) from a centre line. The bar is full at <see cref="FullScale"/>%.
+/// Muted lines (healing that isn't like-for-like) keep the number but drop the colour.
+/// </summary>
+public sealed record OutputLine(string Label, string Text, Brush Brush, double NegWidth, double PosWidth)
 {
-    public static OutputLine Make(string label, double? pct)
+    public const double FullScale = 50;   // percent gap that fills one side of the bar
+    public const double HalfWidth = 18;   // pixels per side; keep in step with MainWindow.xaml
+
+    public static OutputLine Make(string label, double? pct, bool muted = false)
     {
         var text = Stats.FormatPercentVs(pct);
-        var brush = text.Length == 0 ? Theme.Dim
+        var brush = text.Length == 0 || muted ? Theme.Dim
                   : text.StartsWith('+') ? Theme.Win
                   : text.StartsWith('-') ? Theme.Loss
                   : Theme.Neutral;
-        return new(label, text.Length == 0 ? "—" : text, brush);
+        double w = pct is double p ? Math.Min(Math.Abs(p), FullScale) / FullScale * HalfWidth : 0;
+        if (w > 0 && w < 1) w = 1;   // any visible gap gets at least a sliver
+        return new(label, text.Length == 0 ? "—" : text, brush,
+                   pct < 0 ? w : 0, pct > 0 ? w : 0);
     }
 }
 
-/// <summary>One line in a simple value table (e.g. MMR: Highest / Average / Lowest).</summary>
-public sealed record InfoLine(string Label, string Value, string Note, Brush NoteBrush);
-
-/// <summary>One line in a Stats table.</summary>
-public sealed class StatView
+/// <summary>One line in a Stats "damage & healing vs. them" table.</summary>
+public sealed class OutputGapView
 {
-    public StatView(StatRow row)
+    public OutputGapView(OutputGap g)
     {
-        Label = row.Label;
-        Games = row.Games;
-        Record = row.Record;
-        WinRate = row.WinRate;
-        WinPct = row.WinPct;
-        Brush = Theme.ForWinRate(row.Games, row.WinRate);
+        Label = g.Label;
+        Games = g.Games;
+        Record = g.Record;
+        DpsPct = g.DpsPct;
+        HpsPct = g.HpsPct;
+        var dps = OutputLine.Make("DPS", g.DpsPct);
+        var hps = OutputLine.Make("HPS", g.HpsPct);
+        Dps = dps.Text; DpsBrush = dps.Brush;
+        Hps = hps.Text; HpsBrush = hps.Brush;
+        HpsTip = g.HpsGames == g.Games ? null
+               : g.HpsGames == 0 ? "No like-for-like games: every game had a different number of healers on each side."
+               : $"From {g.HpsGames} of {g.Games} games — the rest had a different number of healers on each side.";
     }
 
     public string Label { get; }
     public int Games { get; }
     public string Record { get; }
-    public double WinRate { get; }
-    public string WinPct { get; }
-    public Brush Brush { get; }
+    public double? DpsPct { get; }
+    public double? HpsPct { get; }
+    public string Dps { get; }
+    public Brush DpsBrush { get; }
+    public string Hps { get; }
+    public Brush HpsBrush { get; }
+    public string? HpsTip { get; }
 }

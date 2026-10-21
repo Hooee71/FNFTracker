@@ -1,0 +1,24 @@
+# Builds the app and runs the core tests on every pull request (and pushes to main), so a change
+# is known to compile before it's merged. Releases are still made by release.yml on a version tag.
+name: Build
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Run core tests
+        run: dotnet run --project tests/FnfTracker.Tests -c Release
+
+      - name: Build app
+        run: dotnet build FnfTracker.App/FnfTracker.App.csproj -c Release

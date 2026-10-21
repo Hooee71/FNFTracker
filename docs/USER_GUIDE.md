@@ -129,9 +129,13 @@ with names; click a name to open that player's check-pvp.fr profile), **Map**, *
 
 **DPS/HPS** (addon games only) compares your team's total damage and healing with the enemy team's:
 `DPS -18%` means you did 18% less damage than they did. Green when you were ahead, red when you were
-behind. Both teams play the same length of game, so the gap in totals is the same as the gap in DPS
+behind, with a small bar that grows right (ahead) or left (behind) from a centre tick and fills at a
+50% gap. Both teams play the same length of game, so the gap in totals is the same as the gap in DPS
 and HPS. Hover the cell for the actual totals, per-second rates and game length. Sorting the column
 sorts by the damage gap. (Game length is still recorded and editable in the form.)
+
+HPS turns grey when the teams brought a different number of healers: a healer comp out-heals double
+DPS every time, so that number says nothing about who played better. Damage is always comparable.
 
 ---
 
@@ -157,6 +161,11 @@ The app remembers your choice.
   dashed lines separate nights.
 - **MMR:** the highest, average and lowest enemy team MMR you've faced, and whether you won those
   games. This needs addon-recorded games.
+- **Damage & healing vs. them** (addon games only): your team's total damage and healing compared
+  with the enemy team's, first for all games, wins and losses, then for each enemy comp (worst damage
+  gap first). `-20%` DPS means you did 20% less damage than them. Each figure comes from the summed
+  totals over those games. Healing only counts games where both teams brought the same number of
+  healers; hover an HPS figure to see how many games it's built from.
 - **Win-rate tables**, broken down by:
   enemy comp, enemy class, enemy spec, comp type (double DPS vs. with a healer), map, game number in
   the night, game length, day of week, night, tag, and repeat opponents (players you've met more
