@@ -73,6 +73,10 @@ Use the last number for fixes (`v0.5.1` → `v0.5.2`) and the middle one for new
 Map, rating, length, tags and notes are optional. With the addon installed you can skip this entirely. Type in a class box to jump (e.g. "Ro" for Rogue).
 "Same as last game" copies the previous opponents for a rematch. Click a row to edit or delete it.
 
+**Our team** starts as your last game's team. If you play more than one comp, buttons for your recent
+comps let you switch with one click. Addon-imported games always record both of your actual specs, read
+from the scoreboard, with your own spec and your partner's (inspect data) as a backup if the scoreboard hides one.
+
 If you leave **+/-** blank but fill in **Rating after**, the app works out the change from your last rated game.
 
 **Stats tab:** record, streaks, rating line, and win rate broken down by enemy comp, class, spec,
@@ -83,7 +87,7 @@ nights you played), Last 7 days, Last 30 days, or a Custom range. Set the season
 
 A "night" runs 6 AM to 6 AM, so a Friday session that goes past midnight still counts as Friday.
 
-**Settings tab:** your name, your default team (pre-fills each new game), and data tools:
+**Settings tab:** your name and data tools:
 
 - **Export for partner / Merge partner's file:** swap files to combine your logs. Games you both logged
   (same result and enemy classes within 10 minutes) are skipped.
