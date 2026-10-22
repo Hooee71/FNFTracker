@@ -217,6 +217,8 @@ GitHub can take a few minutes before the page appears.
   usually shows the change within a minute or two.
 - Tick **Publish automatically when the addon brings in new games** and you won't need to click
   anything: log out of WoW and the site updates by itself.
+- **Open pages refresh themselves.** A page left open checks every minute for a newer publish and
+  reloads when there is one, keeping your filter, search, sort, scroll position and Stats range.
 
 The token is stored encrypted on your PC, separately from your games, so it is **not** included when
 you send your partner an export. **Forget token** removes it. If a publish says the token was

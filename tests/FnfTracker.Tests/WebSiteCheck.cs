@@ -61,6 +61,12 @@ public static class WebSiteCheck
 
         Check(index.Contains(WebSite.AssetPaths.MatchesArt) && stats.Contains(WebSite.AssetPaths.StatsArt), "each page has its mascot art");
         Check(System.Text.RegularExpressions.Regex.IsMatch(index, @"href=""site\.css\?v=[0-9a-f]{10}""") && index.Contains("site.js?v="), "stylesheet and script links are versioned");
+        // Auto-refresh version: in every page and version.json, same for the same data, new when it changes.
+        var version = Between(site["version.json"], "\"version\":\"", "\"");
+        Check(version.Length == 10 && index.Contains($"name=\"fnf-version\" content=\"{version}\"") && stats.Contains(version) && !index.Contains("__FNF_SITE_VERSION__"), "version stamped in pages: " + version);
+        Check(Between(WebSite.Build(data, fri.AddHours(3))["version.json"], "\"version\":\"", "\"") == version, "same data, same version");
+        data.Matches[0].Won = !data.Matches[0].Won;
+        Check(Between(WebSite.Build(data, fri.AddHours(3))["version.json"], "\"version\":\"", "\"") != version, "changed data, new version");
         var empty = WebSite.Build(new FnfData(), fri);
         Check(empty["index.html"].Contains("No games yet") && empty["stats.html"].Contains("data-range=\"all\""), "empty data still builds");
         return fails;
