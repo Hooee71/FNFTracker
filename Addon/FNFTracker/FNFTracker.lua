@@ -17,7 +17,7 @@ match ends so the final copy has the real numbers. The app does all the math.
 ]]
 
 local ADDON_NAME = ...
-local VERSION = "0.1.2"
+local VERSION = "0.1.3"
 local ICON = "|TInterface\\AddOns\\FNFTracker\\Icon:0|t"
 local TWO_V_TWO_BRACKET = 1 -- GetPersonalRatedInfo bracket index for 2v2
 
@@ -29,6 +29,16 @@ local function EnsureDB()
     FNFTrackerDB = FNFTrackerDB or {}
     FNFTrackerDB.version = 1
     FNFTrackerDB.matches = FNFTrackerDB.matches or {}
+end
+
+-- Drops anything that isn't a 2v2 (4 players). Older versions saved every
+-- arena; the app ignores those anyway, so there's no point keeping them.
+local function PruneNonTwoVTwo()
+    local kept = {}
+    for _, m in ipairs(FNFTrackerDB.matches) do
+        if #(m.players or {}) == 4 then kept[#kept + 1] = m end
+    end
+    FNFTrackerDB.matches = kept
 end
 
 local function Print(msg)
@@ -54,6 +64,20 @@ local function InArena()
     return instanceType == "arena"
 end
 
+-- Players per side for the arena we're in: 2 for 2v2, 3 for 3v3 / Solo
+-- Shuffle. nil if the client won't say yet; the scoreboard count decides then.
+local function ArenaTeamSize()
+    if C_PvP.IsSoloShuffle and Clean(Try(C_PvP.IsSoloShuffle)) then return 3 end
+    for i = 1, (Clean(Try(GetMaxBattlefieldID)) or 0) do
+        local status, _, teamSize = Try(GetBattlefieldStatus, i)
+        if Clean(status) == "active" then
+            teamSize = Clean(teamSize)
+            if teamSize and teamSize > 0 then return teamSize end
+        end
+    end
+    return nil
+end
+
 local function NewId()
     return date("%Y%m%d-%H%M%S") .. "-" .. math.random(1000, 9999)
 end
@@ -67,6 +91,7 @@ local function StartMatch()
         startedAt = time(),
         map = mapName,
         mapId = instanceID,
+        teamSize = ArenaTeamSize(),
         rated = Clean(Try(C_PvP.IsRatedArena)) and true or false,
         skirmish = Clean(Try(IsArenaSkirmish)) and true or false,
         recordedBy = playerName .. "-" .. realm,
@@ -153,9 +178,26 @@ end
 -- Reads the full scoreboard into the record. Safe to call repeatedly; each call
 -- replaces the previous read so the last (most complete) one wins.
 local function CaptureScoreboard()
-    if not current or not current.completed then return end
+    if not current or not current.completed or current.notTwoVTwo then return end
     local n = Clean(Try(GetNumBattlefieldScores)) or 0
     if n == 0 then return end
+
+    -- 2v2 only. Trust the bracket size when the client gives it; otherwise a
+    -- 2v2 scoreboard has 4 rows. Never save or announce anything else.
+    current.teamSize = current.teamSize or ArenaTeamSize()
+    if (current.teamSize and current.teamSize ~= 2) or n > 4 then
+        current.notTwoVTwo = true
+        if current.record then
+            -- Saved before we could tell (shouldn't happen); take it back out.
+            for i, m in ipairs(FNFTrackerDB.matches) do
+                if m == current.record then table.remove(FNFTrackerDB.matches, i) break end
+            end
+            current.record, lastRecord = nil, nil
+        end
+        Print("not a 2v2, so this one isn't recorded.")
+        return
+    end
+    if n < 4 then return end   -- scoreboard still filling in; a later read will get it
 
     local players, hidden = {}, 0
     for i = 1, n do
@@ -258,7 +300,7 @@ end
 
 local function ShowHistory()
     local matches = FNFTrackerDB and FNFTrackerDB.matches or {}
-    Print(string.format("%d match(es) saved. Log out or /reload to write them for the app.", #matches))
+    Print(string.format("%d 2v2 match(es) saved. Log out or /reload to write them for the app.", #matches))
     for i = math.max(1, #matches - 4), #matches do
         local m = matches[i]
         local me, enemies = nil, {}
@@ -293,7 +335,7 @@ frame:RegisterEvent("INSPECT_READY")
 
 frame:SetScript("OnEvent", function(_, event, ...)
     if event == "ADDON_LOADED" then
-        if ... == ADDON_NAME then EnsureDB() end
+        if ... == ADDON_NAME then EnsureDB(); PruneNonTwoVTwo() end
     elseif event == "PLAYER_ENTERING_WORLD" or event == "ZONE_CHANGED_NEW_AREA" then
         OnZoneChange()
     elseif event == "ARENA_PREP_OPPONENT_SPECIALIZATIONS" then
