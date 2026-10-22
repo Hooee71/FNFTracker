@@ -490,7 +490,7 @@ public partial class MainWindow : Window
         var hit = e.OriginalSource as DependencyObject;
         while (hit != null && hit is not DataGridRow)
         {
-            if (hit is DataGridColumnHeader or System.Windows.Controls.Primitives.ScrollBar or Button
+            if (hit is System.Windows.Controls.Primitives.DataGridColumnHeader or System.Windows.Controls.Primitives.ScrollBar or Button
                 or System.Windows.Documents.Hyperlink) return;
             hit = hit is Visual or System.Windows.Media.Media3D.Visual3D
                 ? VisualTreeHelper.GetParent(hit)
