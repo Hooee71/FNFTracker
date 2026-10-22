@@ -17,12 +17,9 @@ namespace FnfTracker.App;
 
 public partial class MainWindow : Window
 {
-    private const string TimeFormat = "yyyy-MM-dd HH:mm";
-
     private readonly DataStore _store = new();
     private bool _loadFailed;
     private bool _busy;               // suppresses event handlers while we set controls from code
-    private Guid? _editingId;
     private List<RatingPoint> _ratingPoints = new();
     private readonly List<FileSystemWatcher> _watchers = new();
     private ImageSource? _matchesArt, _statsArt, _settingsArt;
@@ -65,12 +62,9 @@ public partial class MainWindow : Window
         Closing += (_, _) => SaveWindowPlacement();
         Loaded += (_, _) => Window_StateChanged(this, EventArgs.Empty); // sync title bar if we start maximized
 
-        MapBox.ItemsSource = GameData.Maps;
         DataPathText.Text = "Saved at: " + _store.FilePath;
         LoadSettingsIntoUi();
-        ClearForm();
         Refresh();
-        Loaded += (_, _) => Enemy1.FocusClass();
 
         // Addon import: once now, then whenever WoW rewrites the SavedVariables file.
         if (string.IsNullOrWhiteSpace(Settings.WowFolder) && Directory.Exists(AddonImport.DefaultWowFolder))
@@ -122,13 +116,26 @@ public partial class MainWindow : Window
             _ => null,
         };
         MascotArt.Source = art;
-        // Matches and Stats art sit a little lower so they don't crowd the title bar;
-        // the Matches art is also a touch smaller.
         // All art keeps 24px clear of the right edge so it doesn't collide with the scroll bar.
-        MascotArt.Margin = Tabs.SelectedIndex is 0 or 1 ? new Thickness(0, 14, 24, 0) : new Thickness(0, -10, 24, 0);
-        MascotArt.Width = Tabs.SelectedIndex == 0 ? 350 : 390;
+        // Matches: the table runs the full width now, so the art is smaller and tucked into the
+        // corner above it (the strip over the table leaves it room). Its scrim shrinks to match.
+        // Stats sits a little lower so it doesn't crowd the title bar.
+        bool matches = Tabs.SelectedIndex == 0;
+        MascotArt.Margin = Tabs.SelectedIndex switch
+        {
+            0 => new Thickness(0, 4, 24, 0),
+            1 => new Thickness(0, 14, 24, 0),
+            _ => new Thickness(0, -10, 24, 0),
+        };
+        MascotArt.Width = matches ? 250 : 390;
         MascotArt.Visibility = art == null ? Visibility.Collapsed : Visibility.Visible;
-        if (MascotScrim != null) MascotScrim.Visibility = MascotArt.Visibility;
+        if (MascotScrim != null)
+        {
+            MascotScrim.Visibility = MascotArt.Visibility;
+            MascotScrim.Width = matches ? 420 : 660;
+            MascotScrim.Height = matches ? 300 : 520;
+            MascotScrim.Margin = matches ? new Thickness(0, -10, -45, 0) : new Thickness(0, -74, -95, 0);
+        }
     }
 
     // ───────────────────────── Custom title bar ─────────────────────────
@@ -403,9 +410,10 @@ public partial class MainWindow : Window
         ApplyMatchSort();
         _busy = false;
 
+        MatchCountText.Text = AllMatches.Count == 1 ? "1 game" : $"{AllMatches.Count} games";
+
         RefreshHeader();
         RefreshStats();
-        RefreshTeamPicks();
     }
 
     private void RefreshHeader()
@@ -428,179 +436,81 @@ public partial class MainWindow : Window
         SessionText.Text = $"{label}: {session.Wins}-{session.Losses}  ·  streak {session.StreakText}";
     }
 
-    // ───────────────────────── Match form ─────────────────────────
+    // ───────────────────────── Edit / delete a game ─────────────────────────
 
-    private void ClearForm()
+    /// <summary>Opens the game in a pop-up editor; saves and refreshes if it comes back with changes.</summary>
+    private void EditMatch(MatchRow row)
     {
-        _editingId = null;
-        FormTitle.Text = "New match";
-        SaveButton.Content = "Save game";
-        DeleteButton.IsEnabled = false;
+        var editor = new MatchEditor(row.Match, $"{row.Night} · game #{row.GameNo}", AllMatches) { Owner = this };
+        if (editor.ShowDialog() != true) return;
 
-        WinRadio.IsChecked = false;
-        LossRadio.IsChecked = false;
-        Enemy1.Clear();
-        Enemy2.Clear();
-        MapBox.Text = "";
-        RatingAfterBox.Text = "";
-        RatingChangeBox.Text = "";
-        DurationBox.Text = "";
-        TagsBox.Text = "";
-        NotesBox.Text = "";
-        PlayedAtBox.Text = DateTime.Now.ToString(TimeFormat);
-        PrefillOurTeam();
-
-        _busy = true;
-        MatchesGrid.SelectedItem = null;
-        _busy = false;
+        _store.Upsert(row.Match);
+        if (!Persist()) return;
+        Refresh();
+        SelectMatch(row.Match.Id);
+        Status("Game updated.");
     }
 
-    private void LoadIntoForm(MatchRow row)
+    private void DeleteMatch(MatchRow row)
     {
         var m = row.Match;
-        _editingId = m.Id;
-        FormTitle.Text = $"Editing {row.Night} game #{row.GameNo}";
-        SaveButton.Content = "Update game";
-        DeleteButton.IsEnabled = true;
+        var what = $"{row.Night} game #{row.GameNo}: {(m.Won ? "win" : "loss")} vs {(m.Enemies.Count == 0 ? "unknown" : m.EnemyCompKey)}";
+        if (MessageBox.Show(this, $"Delete this game?\n\n{what}", "FNF Tracker",
+                            MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
 
-        WinRadio.IsChecked = m.Won;
-        LossRadio.IsChecked = !m.Won;
-        Enemy1.Slot = m.Enemies.ElementAtOrDefault(0) ?? new PlayerSlot();
-        Enemy2.Slot = m.Enemies.ElementAtOrDefault(1) ?? new PlayerSlot();
-        MapBox.Text = m.Map;
-        RatingAfterBox.Text = m.RatingAfter?.ToString() ?? "";
-        RatingChangeBox.Text = m.RatingChange?.ToString() ?? "";
-        DurationBox.Text = Stats.FormatDuration(m.DurationSeconds);
-        TagsBox.Text = string.Join(", ", m.Tags);
-        NotesBox.Text = m.Notes;
-        PlayedAtBox.Text = m.PlayedAt.ToString(TimeFormat);
-        Our1.Slot = m.OurTeam.ElementAtOrDefault(0) ?? new PlayerSlot();
-        Our2.Slot = m.OurTeam.ElementAtOrDefault(1) ?? new PlayerSlot();
-    }
-
-    // Comp key of the team we pre-filled, so a later refresh (e.g. an addon import) can
-    // move it to the newest team without clobbering a team you picked yourself.
-    private string? _prefilledTeamKey;
-
-    private void PrefillOurTeam()
-    {
-        SetOurTeam(Stats.LastTeam(AllMatches));
-        _prefilledTeamKey = CurrentOurTeamKey();
-    }
-
-    private void SetOurTeam(IReadOnlyList<PlayerSlot> team)
-    {
-        Our1.Slot = team.ElementAtOrDefault(0)?.Clone() ?? new PlayerSlot();
-        Our2.Slot = team.ElementAtOrDefault(1)?.Clone() ?? new PlayerSlot();
-    }
-
-    private string CurrentOurTeamKey() => Comp.Key(new[] { Our1.Slot, Our2.Slot });
-
-    /// <summary>One button per comp we've played lately; only shown when there's more than one.</summary>
-    private void RefreshTeamPicks()
-    {
-        OurTeamPicks.Children.Clear();
-        var teams = Stats.RecentTeams(AllMatches);
-        foreach (var team in teams)
-        {
-            var button = new Button
-            {
-                Content = Comp.Key(team),
-                Padding = new Thickness(10, 3, 10, 3),
-                Margin = new Thickness(0, 0, 6, 6),
-                ToolTip = "Use this team for this game",
-            };
-            button.Click += (_, _) => SetOurTeam(team);
-            OurTeamPicks.Children.Add(button);
-        }
-        OurTeamPicks.Visibility = teams.Count > 1 ? Visibility.Visible : Visibility.Collapsed;
-
-        // New-game form still showing the pre-fill? Keep it on the newest team.
-        if (_editingId is null && CurrentOurTeamKey() == _prefilledTeamKey) PrefillOurTeam();
-    }
-
-    private void SaveMatch()
-    {
-        if (WinRadio.IsChecked != true && LossRadio.IsChecked != true)
-        {
-            Status("Pick Win or Loss first (Ctrl+W / Ctrl+L).", error: true);
-            return;
-        }
-
-        if (!DateTime.TryParseExact(PlayedAtBox.Text.Trim(), TimeFormat, CultureInfo.CurrentCulture,
-                                    DateTimeStyles.None, out var playedAt)
-            && !DateTime.TryParse(PlayedAtBox.Text.Trim(), CultureInfo.CurrentCulture,
-                                  DateTimeStyles.None, out playedAt))
-        {
-            MoreExpander.IsExpanded = true;
-            Status($"Couldn't read 'Played at'. Use {TimeFormat}, e.g. {DateTime.Now.ToString(TimeFormat)}.", error: true);
-            return;
-        }
-
-        if (!TryParseInt(RatingAfterBox.Text, out var ratingAfter))
-        {
-            Status("'Rating after' should be a number, like 1840.", error: true);
-            return;
-        }
-        if (!TryParseInt(RatingChangeBox.Text, out var ratingChange))
-        {
-            Status("'+/-' should be a number, like 14 or -11.", error: true);
-            return;
-        }
-
-        var duration = Stats.ParseDuration(DurationBox.Text);
-        if (!string.IsNullOrWhiteSpace(DurationBox.Text) && duration is null)
-        {
-            Status("Length: use 4:32, or 4.5 for minutes.", error: true);
-            return;
-        }
-
-        var existing = _editingId is Guid id ? AllMatches.FirstOrDefault(m => m.Id == id) : null;
-        var match = existing ?? new Match
-        {
-            RecordedBy = string.IsNullOrWhiteSpace(Settings.MyName) ? null : Settings.MyName.Trim(),
-        };
-
-        // Work out +/- from the previous rated game if it was left blank.
-        if (ratingChange is null && ratingAfter is int after)
-        {
-            var previous = AllMatches
-                .Where(m => m.Id != match.Id && m.PlayedAt < playedAt && m.RatingAfter.HasValue)
-                .OrderByDescending(m => m.PlayedAt)
-                .FirstOrDefault();
-            if (previous != null) ratingChange = after - previous.RatingAfter!.Value;
-        }
-
-        match.PlayedAt = playedAt;
-        match.Won = WinRadio.IsChecked == true;
-        match.Map = MapBox.Text.Trim();
-        match.Enemies = new[] { Enemy1.Slot, Enemy2.Slot }.Where(p => !p.IsEmpty).ToList();
-        match.OurTeam = new[] { Our1.Slot, Our2.Slot }.Where(p => !p.IsEmpty).ToList();
-        match.RatingAfter = ratingAfter;
-        match.RatingChange = ratingChange;
-        match.DurationSeconds = duration;
-        match.Tags = TagsBox.Text.Split(',', ';').Select(t => t.Trim()).Where(t => t.Length > 0).ToList();
-        match.Notes = NotesBox.Text.Trim();
-
-        _store.Upsert(match);
+        _store.Delete(m.Id);
         if (!Persist()) return;
-
         Refresh();
-        ClearForm();
-        Status(existing == null
-            ? $"Saved: {(match.Won ? "Win" : "Loss")} vs {match.EnemyCompKey}"
-            : "Game updated.");
-        Enemy1.FocusClass();
+        Status("Game deleted.");
     }
 
-    private static bool TryParseInt(string text, out int? value)
+    /// <summary>Re-selects a game after the rows are rebuilt, so you don't lose your place.</summary>
+    private void SelectMatch(Guid id)
     {
-        value = null;
-        text = text.Trim().Replace("+", "");
-        if (text.Length == 0) return true;
-        if (!int.TryParse(text, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var v)) return false;
-        value = v;
-        return true;
+        if (MatchesGrid.ItemsSource is not IEnumerable<MatchRow> rows) return;
+        var row = rows.FirstOrDefault(r => r.Match.Id == id);
+        if (row == null) return;
+        MatchesGrid.SelectedItem = row;
+        MatchesGrid.ScrollIntoView(row);
+    }
+
+    private void EditRow_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.DataContext is MatchRow row) EditMatch(row);
+    }
+
+    private void DeleteRow_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.DataContext is MatchRow row) DeleteMatch(row);
+    }
+
+    private void MatchesGrid_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+    {
+        // Only a double-click on a game row: not the column headers, the scroll bar, or the icons.
+        var hit = e.OriginalSource as DependencyObject;
+        while (hit != null && hit is not DataGridRow)
+        {
+            if (hit is System.Windows.Controls.Primitives.DataGridColumnHeader or System.Windows.Controls.Primitives.ScrollBar or Button
+                or System.Windows.Documents.Hyperlink) return;
+            hit = hit is Visual or System.Windows.Media.Media3D.Visual3D
+                ? VisualTreeHelper.GetParent(hit)
+                : LogicalTreeHelper.GetParent(hit);
+        }
+        if (hit is DataGridRow { Item: MatchRow row })
+        {
+            e.Handled = true;
+            EditMatch(row);
+        }
+    }
+
+    private void MatchesGrid_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (MatchesGrid.SelectedItem is not MatchRow row || Keyboard.Modifiers != ModifierKeys.None) return;
+        switch (e.Key)
+        {
+            case Key.Enter: EditMatch(row); e.Handled = true; break;
+            case Key.Delete: DeleteMatch(row); e.Handled = true; break;
+        }
     }
 
     private bool Persist()
@@ -678,62 +588,6 @@ public partial class MainWindow : Window
             if (_statusTimer is { IsEnabled: false }) StatusText.Text = "";
         };
         StatusPill.BeginAnimation(OpacityProperty, fade);
-    }
-
-    // ───────────────────────── Form events ─────────────────────────
-
-    private void Save_Click(object sender, RoutedEventArgs e) => SaveMatch();
-
-    private void New_Click(object sender, RoutedEventArgs e)
-    {
-        ClearForm();
-        Enemy1.FocusClass();
-    }
-
-    private void Delete_Click(object sender, RoutedEventArgs e)
-    {
-        if (_editingId is not Guid id) return;
-        if (MessageBox.Show("Delete this game?", "FNF Tracker",
-                            MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
-
-        _store.Delete(id);
-        if (!Persist()) return;
-        Refresh();
-        ClearForm();
-        Status("Game deleted.");
-    }
-
-    private void SameAsLast_Click(object sender, RoutedEventArgs e)
-    {
-        var last = AllMatches.Where(m => m.Id != _editingId).OrderByDescending(m => m.PlayedAt).FirstOrDefault();
-        if (last == null)
-        {
-            Status("No previous game to copy.");
-            return;
-        }
-        Enemy1.Slot = last.Enemies.ElementAtOrDefault(0)?.Clone() ?? new PlayerSlot();
-        Enemy2.Slot = last.Enemies.ElementAtOrDefault(1)?.Clone() ?? new PlayerSlot();
-    }
-
-    private void Now_Click(object sender, RoutedEventArgs e) =>
-        PlayedAtBox.Text = DateTime.Now.ToString(TimeFormat);
-
-    private void MatchesGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-        if (_busy) return;
-        if (MatchesGrid.SelectedItem is MatchRow row) LoadIntoForm(row);
-    }
-
-    private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
-    {
-        if (Keyboard.Modifiers != ModifierKeys.Control || Tabs.SelectedIndex != 0) return;
-        switch (e.Key)
-        {
-            case Key.S: SaveMatch(); e.Handled = true; break;
-            case Key.N: ClearForm(); Enemy1.FocusClass(); e.Handled = true; break;
-            case Key.W: WinRadio.IsChecked = true; e.Handled = true; break;
-            case Key.L: LossRadio.IsChecked = true; e.Handled = true; break;
-        }
     }
 
     // ───────────────────────── Stats ─────────────────────────

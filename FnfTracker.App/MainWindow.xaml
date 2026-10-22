@@ -4,8 +4,7 @@
         xmlns:local="clr-namespace:FnfTracker.App"
         Title="FNF Arena Tracker" Icon="Assets/fnf.ico" Width="1600" Height="920" MinWidth="1040" MinHeight="620"
         WindowStartupLocation="CenterScreen" Background="#1B1B1F"
-        StateChanged="Window_StateChanged"
-        PreviewKeyDown="Window_PreviewKeyDown">
+        StateChanged="Window_StateChanged">
     <!-- Custom title bar: the app draws its own (see TitleBar below) instead of the standard Windows one.
          Dragging, double-click to maximize, right-click menu, snapping and edge resizing still work. -->
     <WindowChrome.WindowChrome>
@@ -94,10 +93,58 @@
                 </Setter.Value>
             </Setter>
         </Style>
+        <!-- Edit / delete mini icons on each Matches row: flat, gold on hover; delete goes crimson. -->
+        <Style x:Key="RowIconButton" TargetType="Button">
+            <Setter Property="Width" Value="26" />
+            <Setter Property="Height" Value="24" />
+            <Setter Property="Foreground" Value="#C9B48A" />
+            <Setter Property="FontFamily" Value="Segoe Fluent Icons, Segoe MDL2 Assets" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bg" Background="Transparent" CornerRadius="4">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bg" Property="Background" Value="#33D8B56A" />
+                                <Setter Property="Foreground" Value="#F2DDA8" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bg" Property="Background" Value="#55D8B56A" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="RowDeleteButton" TargetType="Button" BasedOn="{StaticResource RowIconButton}">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bg" Background="Transparent" CornerRadius="4">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bg" Property="Background" Value="#9B1C1C" />
+                                <Setter Property="Foreground" Value="White" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bg" Property="Background" Value="#6E1414" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
     <Grid x:Name="RootGrid">
         <!-- Background art: shows through in the banner (logo + tabs), then a dark veil fades in
-             so tables and the form sit on an almost-solid surface. The veil uses absolute pixels,
+             so the tables sit on an almost-solid surface. The veil uses absolute pixels,
              so the banner stays the same height whatever the window size. -->
         <Image Source="Assets/background.jpg" Stretch="UniformToFill" VerticalAlignment="Top"
                HorizontalAlignment="Center" IsHitTestVisible="False"
@@ -182,18 +229,28 @@
                         <TextBlock Text="Matches" FontSize="16" FontFamily="{DynamicResource HeadingFont}" />
                     </TabItem.Header>
                     <Grid Margin="0,10,0,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="16" />
-                            <ColumnDefinition Width="390" />
-                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
 
-                        <DataGrid x:Name="MatchesGrid" Grid.Column="0"
+                        <!-- Games come in from the addon; this strip just counts them and says how to fix one.
+                             It also gives the mascot art (top right) room above the table. The right margin
+                             keeps the text out from under the art. -->
+                        <DockPanel Grid.Row="0" Height="48" Margin="2,0,280,0">
+                            <TextBlock x:Name="MatchCountText" DockPanel.Dock="Left" VerticalAlignment="Bottom" Margin="0,0,0,8"
+                                       FontFamily="{DynamicResource HeadingFont}" FontSize="16" />
+                            <TextBlock VerticalAlignment="Bottom" Margin="16,0,0,9" Opacity="0.5" FontSize="12" TextTrimming="CharacterEllipsis"
+                                       Text="Double-click a game (or use its pencil) to fix it · Del removes the selected game" />
+                        </DockPanel>
+
+                        <DataGrid x:Name="MatchesGrid" Grid.Row="1"
                                   AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single"
                                   HeadersVisibility="Column" GridLinesVisibility="Horizontal"
                                   CanUserResizeRows="False"
                                   Sorting="MatchesGrid_Sorting"
-                                  SelectionChanged="MatchesGrid_SelectionChanged">
+                                  MouseDoubleClick="MatchesGrid_MouseDoubleClick"
+                                  PreviewKeyDown="MatchesGrid_PreviewKeyDown">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Night" HeaderStyle="{StaticResource CenterHeader}" Binding="{Binding Night}" SortMemberPath="PlayedAt" Width="Auto" MinWidth="44" ElementStyle="{StaticResource CenterCellText}" />
                                 <DataGridTextColumn Header="#" HeaderStyle="{StaticResource CenterHeader}" Binding="{Binding GameNo}" Width="Auto" MinWidth="44" ElementStyle="{StaticResource CenterCellText}" />
@@ -276,98 +333,34 @@
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
+                                <!-- Edit / delete icons, always the last column. Dim until the row is hovered or selected. -->
+                                <DataGridTemplateColumn Header="" Width="66" CanUserResize="False" CanUserReorder="False" CanUserSort="False">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                <StackPanel.Style>
+                                                    <Style TargetType="StackPanel">
+                                                        <Setter Property="Opacity" Value="0.4" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=DataGridRow}}" Value="True">
+                                                                <Setter Property="Opacity" Value="1" />
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=DataGridRow}}" Value="True">
+                                                                <Setter Property="Opacity" Value="1" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </StackPanel.Style>
+                                                <Button Style="{StaticResource RowIconButton}" Content="&#xE70F;"
+                                                        ToolTip="Edit this game" Click="EditRow_Click" />
+                                                <Button Style="{StaticResource RowDeleteButton}" Content="&#xE74D;" Margin="2,0,0,0"
+                                                        ToolTip="Delete this game" Click="DeleteRow_Click" />
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
                             </DataGrid.Columns>
                         </DataGrid>
-
-                        <!-- Entry form -->
-                        <Border Grid.Column="2" CornerRadius="8" Padding="16,8,4,12" Background="#14FFFFFF">
-                            <!-- Right margin keeps fields clear of the (overlay) scrollbar. -->
-                            <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                <StackPanel Margin="0,0,18,0">
-                                    <!-- Room for the mascot art, which fades out just above the form. -->
-                                    <Border Height="165" />
-                                    <TextBlock x:Name="FormTitle" Text="New match" FontSize="22" FontFamily="{DynamicResource HeadingFont}" Margin="0,4,0,8" />
-
-                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-                                        <RadioButton x:Name="WinRadio" GroupName="Result" Content="Win" FontSize="17" FontFamily="{DynamicResource HeadingFont}"
-                                                     Foreground="#4CC38A" Margin="0,0,28,0"
-                                                     ToolTip="Ctrl+W" />
-                                        <RadioButton x:Name="LossRadio" GroupName="Result" Content="Loss" FontSize="17" FontFamily="{DynamicResource HeadingFont}"
-                                                     Foreground="#E5534B" ToolTip="Ctrl+L" />
-                                    </StackPanel>
-
-                                    <DockPanel Margin="0,8,0,4">
-                                        <Button DockPanel.Dock="Right" Content="Same as last game" Padding="10,3"
-                                                Click="SameAsLast_Click"
-                                                ToolTip="Copy the previous game's opponents (rematch)" />
-                                        <TextBlock Text="Opponents" Style="{StaticResource SectionHeader}" Margin="0" VerticalAlignment="Center" />
-                                    </DockPanel>
-                                    <local:SlotEditor x:Name="Enemy1" Header="Enemy 1" />
-                                    <local:SlotEditor x:Name="Enemy2" Header="Enemy 2" />
-
-                                    <TextBlock Text="Our team" Style="{StaticResource SectionHeader}" Margin="0,12,0,4" />
-                                    <TextBlock Text="Starts as your last game's team. Click a comp to switch."
-                                               Opacity="0.6" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,6" />
-                                    <WrapPanel x:Name="OurTeamPicks" Margin="0,0,0,2" />
-                                    <local:SlotEditor x:Name="Our1" Header="Player 1" ShowName="False" />
-                                    <local:SlotEditor x:Name="Our2" Header="Player 2" ShowName="False" />
-
-                                    <TextBlock Text="Map" Style="{StaticResource FieldLabel}" />
-                                    <ComboBox x:Name="MapBox" IsEditable="True" />
-
-                                    <Grid Margin="0,4,0,0">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="8" />
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="8" />
-                                            <ColumnDefinition Width="*" />
-                                        </Grid.ColumnDefinitions>
-                                        <StackPanel Grid.Column="0">
-                                            <TextBlock Text="Rating after" Style="{StaticResource FieldLabel}" />
-                                            <TextBox x:Name="RatingAfterBox" ToolTip="Your 2v2 rating after this game" />
-                                        </StackPanel>
-                                        <StackPanel Grid.Column="2">
-                                            <TextBlock Text="+/-" Style="{StaticResource FieldLabel}" />
-                                            <TextBox x:Name="RatingChangeBox"
-                                                     ToolTip="Leave blank to work it out from your last rating" />
-                                        </StackPanel>
-                                        <StackPanel Grid.Column="4">
-                                            <TextBlock Text="Length" Style="{StaticResource FieldLabel}" />
-                                            <TextBox x:Name="DurationBox" ToolTip="4:32, or 4.5 for minutes" />
-                                        </StackPanel>
-                                    </Grid>
-
-                                    <TextBlock Text="Tags (comma separated)" Style="{StaticResource FieldLabel}" />
-                                    <TextBox x:Name="TagsBox" ToolTip="e.g. bad opener, dampening, got trained" />
-
-                                    <TextBlock Text="Notes" Style="{StaticResource FieldLabel}" />
-                                    <TextBox x:Name="NotesBox" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="60"
-                                             VerticalScrollBarVisibility="Auto" />
-
-                                    <Expander x:Name="MoreExpander" Header="Played at" Margin="0,12,0,0">
-                                        <StackPanel Margin="0,6,0,0">
-                                            <TextBlock Text="Played at" Style="{StaticResource FieldLabel}" Margin="0,0,0,3" />
-                                            <DockPanel>
-                                                <Button DockPanel.Dock="Right" Content="Now" Padding="10,3" Margin="8,0,0,0"
-                                                        Click="Now_Click" />
-                                                <TextBox x:Name="PlayedAtBox" ToolTip="yyyy-MM-dd HH:mm" />
-                                            </DockPanel>
-                                        </StackPanel>
-                                    </Expander>
-
-                                    <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
-                                        <Button x:Name="SaveButton" Content="Save game" Padding="18,6" Click="Save_Click"
-                                                IsDefault="False" ToolTip="Ctrl+S" />
-                                        <Button Content="New" Padding="14,6" Margin="8,0,0,0" Click="New_Click" ToolTip="Ctrl+N" />
-                                        <Button x:Name="DeleteButton" Content="Delete" Padding="14,6" Margin="8,0,0,0"
-                                                Click="Delete_Click" IsEnabled="False" />
-                                    </StackPanel>
-                                    <TextBlock Text="Ctrl+W / Ctrl+L win or loss · Ctrl+S save · Ctrl+N new"
-                                               Opacity="0.5" FontSize="11" Margin="0,8,0,0" TextWrapping="Wrap" />
-                                </StackPanel>
-                            </ScrollViewer>
-                        </Border>
                     </Grid>
                 </TabItem>
 
@@ -550,7 +543,7 @@
                 </Border>
             </DockPanel>
 
-            <!-- Mascot art: top-right, the width of the match sidebar, fading out downward.
+            <!-- Mascot art: top-right, fading out downward.
                  Each tab has its own art (or none); see UpdateMascotArt in the code-behind.
                  Drawn on top but ignores the mouse, so everything under it still works. -->
             <Image x:Name="MascotArt" Grid.Row="0" Grid.RowSpan="3" Source="Assets/mascots.png"
