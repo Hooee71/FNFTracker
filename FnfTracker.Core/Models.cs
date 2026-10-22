@@ -109,6 +109,18 @@ public sealed class AppSettings
 
     /// <summary>Matches table column widths, order and sort, as the user left them.</summary>
     public List<ColumnLayout>? MatchColumns { get; set; }
+
+    /// <summary>
+    /// GitHub repo ("owner/name") the public website is published to. The access token is NOT kept
+    /// here (this file is shared with your partner); it's stored encrypted in its own file.
+    /// </summary>
+    public string? PublishRepo { get; set; }
+
+    /// <summary>Publish the website by itself after the addon brings in new games.</summary>
+    public bool AutoPublish { get; set; }
+
+    /// <summary>When the website was last published.</summary>
+    public DateTime? LastPublishedAt { get; set; }
 }
 
 public sealed class ColumnLayout

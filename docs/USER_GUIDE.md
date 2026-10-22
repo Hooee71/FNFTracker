@@ -3,7 +3,8 @@
 FNF Arena Tracker logs our 2v2 arena games on Thursday and Friday nights and shows what's working
 and what isn't: which comps beat us, which maps we lose on, whether we fall apart after game ten.
 
-Everything stays on your own PC in one file. There's no account, no login and no server.
+Everything stays on your own PC in one file. There's no account, no login and no server. If you
+want, the app can also publish the Matches and Stats pages to a free public website (section 7).
 
 ---
 
@@ -197,7 +198,48 @@ Sheets.
 
 ---
 
-## 7. Updates
+## 7. Public website
+
+The app can publish the **Matches** and **Stats** pages as a website anyone can open, on your phone,
+in Discord, wherever. It uses GitHub Pages, which is free. The site is just a copy of the pages:
+it has every game with the enemy names (linked to check-pvp.fr), and the stats for this season,
+all time, the last 30 days and the latest night. Your notes are left off.
+
+**Only one of us needs to do this.** Whoever publishes should be the one with the merged games.
+
+### Setting it up (once, about five minutes)
+
+1. **Make a repo for the site.** On GitHub, click **New repository**. Name it, for example,
+   `fnf-stats`, set it to **Public**, and create it. (Leaving it empty is fine.)
+2. **Make a token** so the app can update it. Go to GitHub **Settings → Developer settings →
+   Personal access tokens → Fine-grained tokens → Generate new token**:
+   - **Expiration:** up to a year (you'll need a new one when it runs out).
+   - **Repository access:** *Only select repositories*, and pick the site repo.
+   - **Permissions → Repository permissions:** **Contents**, **Pages** and **Administration**,
+     each set to **Read and write**. (GitHub asks for Administration to switch Pages on; since the
+     token only covers the site repo, it can't touch anything else.)
+   - Generate it and copy the token (it starts with `github_pat_`).
+3. **In the app,** Settings, under **Website**: type the repo as `yourname/fnf-stats`, paste the
+   token, and click **Publish now**.
+
+The first publish turns GitHub Pages on for you. The address is
+`https://yourname.github.io/fnf-stats/`, and **Open site** takes you there. The very first time,
+GitHub can take a few minutes before the page appears.
+
+### Publishing
+
+- **Publish site** at the bottom right of the window updates the website in one click. GitHub
+  usually shows the change within a minute or two.
+- Tick **Publish automatically when the addon brings in new games** and you won't need to click
+  anything: log out of WoW and the site updates by itself.
+
+The token is stored encrypted on your PC, separately from your games, so it is **not** included when
+you send your partner an export. **Forget token** removes it. If a publish says the token was
+rejected, it has probably expired: make a new one and paste it in.
+
+---
+
+## 8. Updates
 
 The app checks for a new version when it starts. When one is available, a banner appears at the
 bottom right:
@@ -215,7 +257,7 @@ it to a folder of its own like `C:\Games\FNFTracker` and try again.
 
 ---
 
-## 8. Your data and backups
+## 9. Your data and backups
 
 Your games live in one file:
 
@@ -231,7 +273,7 @@ To back up, copy that folder somewhere. To move to a new PC, install the app the
 
 ---
 
-## 9. Troubleshooting
+## 10. Troubleshooting
 
 **Games from the addon aren't showing up.**
 
