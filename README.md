@@ -72,13 +72,12 @@ Use the last number for fixes (`v0.5.1` → `v0.5.2`) and the middle one for new
 
 ## Using it
 
-**Matches tab:** after each game, press Ctrl+W or Ctrl+L, pick the two enemy classes and specs, and press Ctrl+S.
-Map, rating, length, tags and notes are optional. With the addon installed you can skip this entirely. Type in a class box to jump (e.g. "Ro" for Rogue).
-"Same as last game" copies the previous opponents for a rematch. Click a row to edit or delete it.
+**Matches tab:** games come in from the addon; there's no manual entry form. Each row has a pencil
+(edit) and a bin (delete) icon. The pencil, a double-click or Enter opens the game in a pop-up editor;
+the bin or Del deletes it after asking.
 
-**Our team** starts as your last game's team. If you play more than one comp, buttons for your recent
-comps let you switch with one click. Addon-imported games always record both of your actual specs, read
-from the scoreboard, with your own spec and your partner's (inspect data) as a backup if the scoreboard hides one.
+Addon-imported games always record both of your actual specs, read from the scoreboard, with your own
+spec and your partner's (inspect data) as a backup if the scoreboard hides one.
 
 If you leave **+/-** blank but fill in **Rating after**, the app works out the change from your last rated game.
 

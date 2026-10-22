@@ -1,0 +1,101 @@
+<Window x:Class="FnfTracker.App.MatchEditor"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:FnfTracker.App"
+        Title="Edit game" Icon="Assets/fnf.ico" Width="460" SizeToContent="Height"
+        ResizeMode="NoResize" WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
+        Background="#1B1B1F" PreviewKeyDown="Window_PreviewKeyDown">
+    <!-- Pop-up editor for one game from the Matches tab. Games normally come from the addon, so this is
+         for fixing a record, not entering one. Esc cancels, Ctrl+S saves. -->
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- Heading: which game, and where it came from. Thin gold rule underneath, like the main title bar. -->
+        <Border Grid.Row="0" Padding="20,14,20,10" BorderBrush="#806A4A22" BorderThickness="0,0,0,1">
+            <StackPanel>
+                <TextBlock x:Name="HeadingText" FontSize="22" FontFamily="{DynamicResource HeadingFont}" Foreground="#D8B56A" />
+                <TextBlock x:Name="SourceText" Opacity="0.55" FontSize="12" Margin="0,2,0,0" TextWrapping="Wrap" />
+            </StackPanel>
+        </Border>
+
+        <!-- Fields scroll if the screen is too short for them all (see MaxHeight in code). -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="20,10,28,6">
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                    <RadioButton x:Name="WinRadio" GroupName="Result" Content="Win" FontSize="17"
+                                 FontFamily="{DynamicResource HeadingFont}" Foreground="#4CC38A" Margin="0,0,28,0"
+                                 ToolTip="Ctrl+W" />
+                    <RadioButton x:Name="LossRadio" GroupName="Result" Content="Loss" FontSize="17"
+                                 FontFamily="{DynamicResource HeadingFont}" Foreground="#E5534B" ToolTip="Ctrl+L" />
+                </StackPanel>
+
+                <TextBlock Text="Opponents" Style="{StaticResource SectionHeader}" Margin="0,10,0,4" />
+                <local:SlotEditor x:Name="Enemy1" Header="Enemy 1" />
+                <local:SlotEditor x:Name="Enemy2" Header="Enemy 2" />
+
+                <TextBlock Text="Our team" Style="{StaticResource SectionHeader}" Margin="0,6,0,4" />
+                <local:SlotEditor x:Name="Our1" Header="Player 1" ShowName="False" />
+                <local:SlotEditor x:Name="Our2" Header="Player 2" ShowName="False" />
+
+                <TextBlock Text="Map" Style="{StaticResource FieldLabel}" />
+                <ComboBox x:Name="MapBox" IsEditable="True" />
+
+                <Grid Margin="0,4,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="8" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="8" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="8" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="Rating after" Style="{StaticResource FieldLabel}" />
+                        <TextBox x:Name="RatingAfterBox" ToolTip="Your 2v2 rating after this game" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="2">
+                        <TextBlock Text="+/-" Style="{StaticResource FieldLabel}" />
+                        <TextBox x:Name="RatingChangeBox"
+                                 ToolTip="Leave blank to work it out from your previous rated game" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="4">
+                        <TextBlock Text="Their MMR" Style="{StaticResource FieldLabel}" />
+                        <TextBox x:Name="EnemyMmrBox" ToolTip="The enemy team's matchmaking rating" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="6">
+                        <TextBlock Text="Length" Style="{StaticResource FieldLabel}" />
+                        <TextBox x:Name="DurationBox" ToolTip="4:32, or 4.5 for minutes" />
+                    </StackPanel>
+                </Grid>
+
+                <TextBlock Text="Tags (comma separated)" Style="{StaticResource FieldLabel}" />
+                <TextBox x:Name="TagsBox" ToolTip="e.g. bad opener, dampening, got trained" />
+
+                <TextBlock Text="Notes" Style="{StaticResource FieldLabel}" />
+                <TextBox x:Name="NotesBox" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="60"
+                         VerticalScrollBarVisibility="Auto" />
+
+                <TextBlock Text="Played at" Style="{StaticResource FieldLabel}" />
+                <TextBox x:Name="PlayedAtBox" ToolTip="yyyy-MM-dd HH:mm" />
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Error line (hidden until something doesn't parse) and the buttons. -->
+        <Border Grid.Row="2" Padding="20,10,20,16" BorderBrush="#806A4A22" BorderThickness="0,1,0,0">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button x:Name="SaveButton" Content="Save" Padding="20,6" IsDefault="True" Click="Save_Click"
+                            ToolTip="Ctrl+S" />
+                    <Button Content="Cancel" Padding="16,6" Margin="8,0,0,0" IsCancel="True" ToolTip="Esc" />
+                </StackPanel>
+                <TextBlock x:Name="ErrorText" Foreground="#FFB4AE" TextWrapping="Wrap" VerticalAlignment="Center"
+                           Margin="0,0,12,0" Visibility="Collapsed" />
+            </DockPanel>
+        </Border>
+    </Grid>
+</Window>

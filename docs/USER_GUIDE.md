@@ -75,52 +75,37 @@ brings an updated addon too; after updating, click **Install / update addon** ag
 
 ## 4. Matches tab
 
-The left side is the list of games, newest first. The right side is the form for adding or
-editing one.
+The list of games, newest first. Games come in from the addon on their own; there's no form for
+typing them in.
 
 Across the top of the window you'll see tonight's record and streak, and your overall record (or
 season record, if you've set a season start).
 
-### Adding a game by hand
+### Fixing or deleting a game
 
-Only needed if the addon missed one, or if you're not using the addon.
+Each row ends in two small icons: a **pencil** to edit the game and a **bin** to delete it. They're
+faint until you point at the row.
 
-1. Press **Ctrl+W** (win) or **Ctrl+L** (loss).
-2. Pick **Enemy 1** and **Enemy 2**: class, then spec. In a class box you can just type to jump,
-   e.g. `Ro` for Rogue. Their **Name-Realm** is optional.
-3. Press **Ctrl+S** to save.
+- **Edit:** click the pencil, double-click the row, or select it and press **Enter**. The game opens in
+  a pop-up with everything you can change: Win/Loss, both opponents (class, spec, Name-Realm), our
+  team, map, rating after, +/-, their MMR, length, tags, notes and when it was played. **Save** (or
+  Ctrl+S) keeps your changes; **Cancel** (or Esc) throws them away. If something doesn't make sense,
+  like a rating that isn't a number, it says so at the bottom of the pop-up and nothing is saved until
+  it's fixed.
+- **Delete:** click the bin, or select the row and press **Del**. It asks first. A deleted addon game
+  won't come back on the next import.
 
-That's all that's required. Everything else is optional:
+Editing never touches the scoreboard numbers behind the DPS/HPS column.
 
 | Field | What to put |
 |---|---|
-| **Same as last game** | Copies the previous game's opponents. Handy for rematches. |
-| **Our team** | Fills in from your last game. If we've played more than one comp lately, a button for each appears; click one to switch. |
 | **Map** | Pick from the list or type it. |
 | **Rating after** | Your 2v2 rating after the game, e.g. `1840`. |
-| **+/-** | Rating change, e.g. `14` or `-11`. Leave it blank and fill in Rating after, and the app works it out from your last rated game. |
+| **+/-** | Rating change, e.g. `14` or `-11`. Clear it and the app works it out from your previous rated game. |
 | **Length** | `4:32`, or `4.5` for four and a half minutes. |
 | **Tags** | Short labels, comma separated: `bad opener, dampening, got trained`. Each tag gets its own win-rate line on the Stats tab. |
 | **Notes** | Anything you want to remember. |
-| **Played at** | Click to expand. Defaults to now; change it if you're logging a game later. **Now** resets it. |
-
-If something's wrong (no Win/Loss picked, a rating that isn't a number) a message appears in the bar
-at the bottom of the window and nothing is saved until it's fixed.
-
-### Editing or deleting a game
-
-Click any row in the list. Its details load into the form, the title changes to "Editing…", and
-**Save game** becomes **Update game**. Change what you need and press Ctrl+S, or click **Delete**
-(it asks first). Click **New** or press **Ctrl+N** to go back to a blank form.
-
-### Keyboard shortcuts (Matches tab)
-
-| Keys | Does |
-|---|---|
-| Ctrl+W | Win |
-| Ctrl+L | Loss |
-| Ctrl+S | Save |
-| Ctrl+N | New, blank form |
+| **Played at** | `yyyy-MM-dd HH:mm`, e.g. `2026-10-23 21:40`. |
 
 ### Columns
 
@@ -133,7 +118,7 @@ with names; click a name to open that player's check-pvp.fr profile), **Map**, *
 behind, with a small bar that grows right (ahead) or left (behind) from a centre tick and fills at a
 50% gap. Both teams play the same length of game, so the gap in totals is the same as the gap in DPS
 and HPS. Hover the cell for the actual totals, per-second rates and game length. Sorting the column
-sorts by the damage gap. (Game length is still recorded and editable in the form.)
+sorts by the damage gap. (Game length is still recorded, and editable from the pencil.)
 
 HPS turns grey when the teams brought a different number of healers: a healer comp out-heals double
 DPS every time, so that number says nothing about who played better. Damage is always comparable.
@@ -298,8 +283,8 @@ into `World of Warcraft\_retail_\Interface\AddOns\` yourself.
 app, open the data folder, and either send `fnf-data.json` to Steve, or rename it to something like
 `fnf-data.broken.json` and rename `fnf-data.bak.json` to `fnf-data.json` to go back one save.
 
-**A game recorded by the addon looks wrong** (wrong result, specs, or rating). Fix it by clicking the
-row and editing it, and let Steve know. It helps him to have the file
+**A game recorded by the addon looks wrong** (wrong result, specs, or rating). Fix it with the row's
+pencil icon, and let Steve know. It helps him to have the file
 `World of Warcraft\_retail_\WTF\Account\<your account>\SavedVariables\FNFTracker.lua`.
 
 **The app looks plainer than Steve's.** The headings use WoW's own font if it's installed on your PC.
