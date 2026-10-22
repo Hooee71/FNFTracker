@@ -59,6 +59,7 @@ public static class WebSiteCheck
         Check(stats.Contains("Repeat opponents") && stats.Contains("Bonk-Stormrage (Arms Warrior)"), "repeat opponents table");
         Check(site["site.css"].Contains("assets/Marcellus-Regular.ttf") && index.Contains(WebSite.AssetPaths.Logo), "pages reference the app's assets");
 
+        Check(index.Contains(WebSite.AssetPaths.MatchesArt) && stats.Contains(WebSite.AssetPaths.StatsArt), "each page has its mascot art");
         var empty = WebSite.Build(new FnfData(), fri);
         Check(empty["index.html"].Contains("No games yet") && empty["stats.html"].Contains("data-range=\"all\""), "empty data still builds");
         return fails;

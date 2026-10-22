@@ -26,6 +26,9 @@ public static class WebSite
         public const string Background = "assets/background.jpg";
         public const string Font = "assets/Marcellus-Regular.ttf";
         public const string Icon = "favicon.ico";
+        /// <summary>The mascot art from the app's Matches and Stats tabs, top right of each page.</summary>
+        public const string MatchesArt = "assets/mascots.png";
+        public const string StatsArt = "assets/mascots-stats.png";
     }
 
     private static readonly CultureInfo En = CultureInfo.GetCultureInfo("en-US");
@@ -54,6 +57,7 @@ public static class WebSite
 
     private static string Page(string title, string active, FnfData data, DateTime now, string body)
     {
+        var art = active == StatsPage ? AssetPaths.StatsArt : AssetPaths.MatchesArt;
         var (session, overall) = HeaderLines(data, now);
         string Nav(string href, string label) =>
             $"<a href=\"{href}\"{(active == href ? " class=\"active\" aria-current=\"page\"" : "")}>{label}</a>";
@@ -69,7 +73,7 @@ public static class WebSite
 <link rel="icon" href="{{AssetPaths.Icon}}">
 <link rel="stylesheet" href="{{StyleSheet}}">
 </head>
-<body>
+<body class="{{(active == StatsPage ? "page-stats" : "page-matches")}}">
 <header class="banner">
   <div class="wrap banner-row">
     <a class="logo" href="{{MatchesPage}}"><img src="{{AssetPaths.Logo}}" alt="FNF Arena Tracker"></a>
@@ -79,6 +83,7 @@ public static class WebSite
     </div>
   </div>
   <nav class="wrap tabs">{{Nav(MatchesPage, "Matches")}}{{Nav(StatsPage, "Stats")}}</nav>
+  <div class="wrap art" aria-hidden="true"><img src="{{art}}" alt=""></div>
 </header>
 <main class="wrap">
 {{body}}
@@ -433,11 +438,33 @@ body { background: var(--bg); color: var(--text); font: 14px/1.45 "Segoe UI", sy
 a { color: var(--accent); }
 .wrap { max-width: 1500px; margin: 0 auto; padding: 0 16px; }
 .banner {
+  position: relative;
   background: linear-gradient(to bottom, rgba(27,27,31,.3), rgba(27,27,31,.55) 45%, var(--bg)), url("assets/background.jpg") center 30% / cover;
   border-bottom: 1px solid rgba(106,74,34,.5); margin-bottom: 18px;
 }
 .banner-row { display: flex; align-items: center; gap: 28px; flex-wrap: wrap; padding-top: 16px; padding-bottom: 8px; }
 .logo img { height: 54px; display: block; }
+/* Mascot art, top right like the app: fades out downward, ignores the mouse, hidden on narrow screens.
+   The dark radial glow behind it keeps the background art from showing through the characters. */
+.art { position: absolute; left: 0; right: 0; top: 0; height: 0; pointer-events: none; z-index: 2; }
+.art::before {
+  content: ""; position: absolute; right: -70px; top: -60px; width: 600px; height: 440px;
+  background: radial-gradient(closest-side, rgba(14,11,13,.8) 45%, rgba(14,11,13,0));
+}
+.art img {
+  position: absolute; right: 24px; top: 4px; width: 360px; opacity: .85;
+  -webkit-mask-image: linear-gradient(#000 0, #000 45%, transparent 95%);
+          mask-image: linear-gradient(#000 0, #000 45%, transparent 95%);
+}
+@media (min-width: 1100px) {
+  /* Leave the art room so it doesn't sit over the tables. */
+  .banner-row, .tabs { padding-right: 400px; }
+  main { position: relative; z-index: 3; }
+  .page-matches main { padding-top: 40px; }
+  .page-matches .art img { width: 330px; }
+  .page-stats main { padding-top: 20px; }
+}
+@media (max-width: 1099px) { .art { display: none; } }
 .record { font-family: var(--heading); font-size: 17px; display: flex; gap: 6px 24px; flex-wrap: wrap; }
 .record .overall { opacity: .75; }
 .tabs { display: flex; gap: 4px; }
