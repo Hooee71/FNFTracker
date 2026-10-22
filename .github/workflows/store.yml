@@ -38,7 +38,7 @@ jobs:
           switch ("${{ github.event_name }}") {
             "push"              { store\build-msix.ps1 -Version ("${{ github.ref_name }}".TrimStart("v")) }
             "workflow_dispatch" { store\build-msix.ps1 -Version "${{ inputs.version }}" }
-            default             { store\build-msix.ps1 -Version 0.0.1 -Test }
+            default             { store\build-msix.ps1 -Version 0.0.1 -Test -UseNuGetTools }
           }
 
       - uses: actions/upload-artifact@v4

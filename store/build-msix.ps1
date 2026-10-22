@@ -7,7 +7,8 @@
 # that package can't be uploaded to the Store.
 param(
     [Parameter(Mandatory)] [string] $Version,
-    [switch] $Test
+    [switch] $Test,
+    [switch] $UseNuGetTools   # skip any installed Windows SDK (CI uses this to test the download path)
 )
 $ErrorActionPreference = "Stop"
 
@@ -44,12 +45,34 @@ foreach ($k in $values.Keys) { $manifest = $manifest.Replace("`$($k)", [Security
 if ($manifest -match '\$\(\w+\)') { throw "Unfilled value in AppxManifest.xml: $($Matches[0])" }
 Set-Content (Join-Path $app "AppxManifest.xml") $manifest -Encoding utf8
 
-# 3. Pack with MakeAppx from the newest installed Windows SDK.
-$makeappx = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin\*\x64\makeappx.exe" |
-    Sort-Object { [version]$_.Directory.Parent.Name } | Select-Object -Last 1
-if (-not $makeappx) { throw "makeappx.exe not found. Install the Windows SDK." }
+# 3. Pack with MakeAppx: from an installed Windows SDK if there is one, otherwise from Microsoft's
+#    Windows SDK build-tools NuGet package (downloaded once into out\tools, no install needed).
+function Find-MakeAppx([string] $folder) {
+    if (-not (Test-Path $folder)) { return $null }
+    Get-ChildItem $folder -Recurse -Filter makeappx.exe -ErrorAction SilentlyContinue |
+        Where-Object { $_.Directory.Name -eq "x64" } |
+        Sort-Object { try { [version]$_.Directory.Parent.Name } catch { [version]"0.0" } } |
+        Select-Object -Last 1 -ExpandProperty FullName
+}
+$makeappx = if (-not $UseNuGetTools) { Find-MakeAppx "${env:ProgramFiles(x86)}\Windows Kits\10\bin" }
+if (-not $makeappx) {
+    $tools = Join-Path $root "out\tools\sdk-buildtools"
+    $makeappx = Find-MakeAppx $tools
+    if (-not $makeappx) {
+        Write-Host "Windows SDK not installed: downloading MakeAppx from NuGet (Microsoft.Windows.SDK.BuildTools)..."
+        $feed = "https://api.nuget.org/v3-flatcontainer/microsoft.windows.sdk.buildtools"
+        $latest = (Invoke-RestMethod "$feed/index.json").versions | Where-Object { $_ -notmatch "-" } | Select-Object -Last 1
+        $zip = Join-Path $root "out\tools\sdk-buildtools.zip"
+        New-Item (Split-Path $zip) -ItemType Directory -Force | Out-Null
+        Invoke-WebRequest "$feed/$latest/microsoft.windows.sdk.buildtools.$latest.nupkg" -OutFile $zip
+        Expand-Archive $zip $tools -Force
+        Remove-Item $zip
+        $makeappx = Find-MakeAppx $tools
+    }
+}
+if (-not $makeappx) { throw "Couldn't find or download makeappx.exe." }
 $msix = Join-Path $out ("FNFTracker-$Version" + $(if ($Test) { "-TEST" } else { "" }) + ".msix")
-& $makeappx.FullName pack /d $app /p $msix /o
+& $makeappx pack /d $app /p $msix /o
 if ($LASTEXITCODE) { throw "makeappx failed" }
 
 Write-Host "Built $msix"
