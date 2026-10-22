@@ -16,6 +16,12 @@
     <NoWarn>$(NoWarn);WPF0001</NoWarn>
   </PropertyGroup>
 
+  <!-- Microsoft Store package: dotnet publish -p:StoreBuild=true (see store\build-msix.ps1).
+       Turns off the GitHub self-updater, since the Store installs updates itself. -->
+  <PropertyGroup Condition="'$(StoreBuild)' == 'true'">
+    <DefineConstants>$(DefineConstants);STORE_BUILD</DefineConstants>
+  </PropertyGroup>
+
   <!-- The addon ships inside the app so "Install / update addon" can write it into WoW. -->
   <ItemGroup>
     <EmbeddedResource Include="..\Addon\FNFTracker\FNFTracker.toc" LogicalName="FnfTracker.Addon.FNFTracker.toc" />

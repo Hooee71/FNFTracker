@@ -1,0 +1,7 @@
+{
+  "_comment": "Copy these from Partner Center: your app > Product management > Product identity. DisplayName must be the app name you reserved.",
+  "IdentityName": "PASTE Package/Identity/Name",
+  "Publisher": "PASTE Package/Identity/Publisher (starts with CN=)",
+  "PublisherDisplayName": "PASTE Package/Properties/PublisherDisplayName",
+  "DisplayName": "FNF Arena Tracker"
+}
