@@ -34,6 +34,14 @@ public static class WebSite
     private static readonly CultureInfo En = CultureInfo.GetCultureInfo("en-US");
     private static readonly CultureInfo Inv = CultureInfo.InvariantCulture;
 
+    // Browsers (and GitHub Pages' 10-minute cache) can keep an old site.css next to a freshly published
+    // page, which leaves the new page unstyled. A content hash in the link makes every change a new URL.
+    private static readonly string CssUrl = StyleSheet + "?v=" + ShortHash(Css);
+    private static readonly string JsUrl = Script + "?v=" + ShortHash(Js);
+
+    private static string ShortHash(string text) =>
+        Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(text)))[..10].ToLowerInvariant();
+
     /// <summary>Every text file of the site, keyed by its path in the site.</summary>
     public static Dictionary<string, string> Build(FnfData data, DateTime now) => new()
     {
@@ -71,7 +79,7 @@ public static class WebSite
 <title>{{H(title)}} · FNF Arena Tracker</title>
 <meta name="description" content="2v2 arena games and stats from FNF Arena Tracker.">
 <link rel="icon" href="{{AssetPaths.Icon}}">
-<link rel="stylesheet" href="{{StyleSheet}}">
+<link rel="stylesheet" href="{{CssUrl}}">
 </head>
 <body class="{{(active == StatsPage ? "page-stats" : "page-matches")}}">
 <header class="banner">
@@ -83,7 +91,7 @@ public static class WebSite
     </div>
   </div>
   <nav class="wrap tabs">{{Nav(MatchesPage, "Matches")}}{{Nav(StatsPage, "Stats")}}</nav>
-  <div class="wrap art" aria-hidden="true"><img src="{{art}}" alt=""></div>
+  <div class="wrap art" aria-hidden="true"><img src="{{art}}" alt="" width="360"></div>
 </header>
 <main class="wrap">
 {{body}}
@@ -92,7 +100,7 @@ public static class WebSite
   Updated {{H(now.ToString("ddd MMM d, yyyy 'at' h:mm tt", En))}} ·
   made with <a href="https://github.com/{{Updater.Owner}}/{{Updater.Repo}}">FNF Arena Tracker</a>
 </footer>
-<script src="{{Script}}"></script>
+<script src="{{JsUrl}}"></script>
 </body>
 </html>
 """;

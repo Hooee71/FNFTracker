@@ -60,6 +60,7 @@ public static class WebSiteCheck
         Check(site["site.css"].Contains("assets/Marcellus-Regular.ttf") && index.Contains(WebSite.AssetPaths.Logo), "pages reference the app's assets");
 
         Check(index.Contains(WebSite.AssetPaths.MatchesArt) && stats.Contains(WebSite.AssetPaths.StatsArt), "each page has its mascot art");
+        Check(System.Text.RegularExpressions.Regex.IsMatch(index, @"href=""site\.css\?v=[0-9a-f]{10}""") && index.Contains("site.js?v="), "stylesheet and script links are versioned");
         var empty = WebSite.Build(new FnfData(), fri);
         Check(empty["index.html"].Contains("No games yet") && empty["stats.html"].Contains("data-range=\"all\""), "empty data still builds");
         return fails;
