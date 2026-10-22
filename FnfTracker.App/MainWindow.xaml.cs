@@ -1501,6 +1501,8 @@ public partial class MainWindow : Window
         (WebSite.AssetPaths.Background, "Assets/background.jpg"),
         (WebSite.AssetPaths.Font, "Assets/Fonts/Marcellus-Regular.ttf"),
         (WebSite.AssetPaths.Icon, "Assets/fnf.ico"),
+        (WebSite.AssetPaths.MatchesArt, "Assets/mascots.png"),
+        (WebSite.AssetPaths.StatsArt, "Assets/mascots-stats.png"),
     };
 
     private static byte[] ReadResource(string path)
