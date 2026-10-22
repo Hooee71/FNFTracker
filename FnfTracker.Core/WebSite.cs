@@ -42,16 +42,35 @@ public static class WebSite
     private static string ShortHash(string text) =>
         Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(text)))[..10].ToLowerInvariant();
 
+    /// <summary>
+    /// Small file holding the site's current version. Open pages check it every minute and reload
+    /// themselves when a newer publish shows up (see the auto-refresh part of <see cref="Js"/>).
+    /// </summary>
+    public const string VersionFile = "version.json";
+
+    // Stand-in for the version inside the pages, swapped for the real one once everything is built.
+    private const string VersionToken = "__FNF_SITE_VERSION__";
+
     /// <summary>Every text file of the site, keyed by its path in the site.</summary>
-    public static Dictionary<string, string> Build(FnfData data, DateTime now) => new()
+    public static Dictionary<string, string> Build(FnfData data, DateTime now)
     {
-        [MatchesPage] = MatchesHtml(data, now),
-        [StatsPage] = StatsHtml(data, now),
-        [StyleSheet] = Css,
-        [Script] = Js,
-        // Tells GitHub Pages to serve the files as they are (no Jekyll build step).
-        [".nojekyll"] = "",
-    };
+        var files = new Dictionary<string, string>
+        {
+            [MatchesPage] = MatchesHtml(data, now),
+            [StatsPage] = StatsHtml(data, now),
+            [StyleSheet] = Css,
+            [Script] = Js,
+            // Tells GitHub Pages to serve the files as they are (no Jekyll build step).
+            [".nojekyll"] = "",
+        };
+
+        // The version is a hash of everything else, so it changes exactly when the site does.
+        var version = ShortHash(string.Concat(files.OrderBy(f => f.Key, StringComparer.Ordinal)
+                                                   .Select(f => f.Key + "\0" + f.Value)));
+        foreach (var key in files.Keys.ToList()) files[key] = files[key].Replace(VersionToken, version);
+        files[VersionFile] = $"{{\"version\":\"{version}\",\"published\":\"{now.ToString("yyyy-MM-ddTHH:mm:ss", Inv)}\"}}\n";
+        return files;
+    }
 
     // ───────────────────────── Shared page parts ─────────────────────────
 
@@ -78,6 +97,7 @@ public static class WebSite
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{{H(title)}} · FNF Arena Tracker</title>
 <meta name="description" content="2v2 arena games and stats from FNF Arena Tracker.">
+<meta name="fnf-version" content="{{VersionToken}}">
 <link rel="icon" href="{{AssetPaths.Icon}}">
 <link rel="stylesheet" href="{{CssUrl}}">
 </head>
@@ -559,6 +579,17 @@ footer { color: var(--dim); font-size: 12px; padding-top: 24px; padding-bottom: 
 
     private const string Js = """
 (function () {
+  // After an auto-refresh, pick up where the viewer was (filter, search, sort, scroll). Saved just
+  // before the reload, used once, and only on the same page.
+  var RESTORE = "fnf-restore", restored = null;
+  try {
+    restored = JSON.parse(sessionStorage.getItem(RESTORE) || "null");
+    sessionStorage.removeItem(RESTORE);
+  } catch (e) { }
+  if (restored && restored.path !== location.pathname) restored = null;
+  var pageState = function () { return {}; };   // the Matches page fills this in
+  var lastSort = null;                          // { table, col, dir } of the last header click
+
   // Click a column header to sort; click again to reverse. Cells sort by data-sort when present.
   function key(cell, num) {
     var v = cell.hasAttribute("data-sort") ? cell.getAttribute("data-sort") : cell.textContent.trim();
@@ -566,7 +597,8 @@ footer { color: var(--dim); font-size: 12px; padding-top: 24px; padding-bottom: 
     var n = parseFloat(String(v).replace(/[^0-9.+-]/g, ""));
     return isNaN(n) ? null : n;
   }
-  document.querySelectorAll("table.sortable").forEach(function (table) {
+  var sortables = document.querySelectorAll("table.sortable");
+  sortables.forEach(function (table, tableIndex) {
     var heads = table.querySelectorAll("thead th");
     heads.forEach(function (th, col) {
       th.tabIndex = 0;
@@ -587,7 +619,10 @@ footer { color: var(--dim); font-size: 12px; padding-top: 24px; padding-bottom: 
         });
         rows.forEach(function (r) { body.appendChild(r); });
       }
-      th.addEventListener("click", sort);
+      th.addEventListener("click", function () {
+        sort();
+        lastSort = { table: tableIndex, col: col, dir: th.getAttribute("aria-sort") };
+      });
       th.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); sort(); } });
     });
   });
@@ -615,6 +650,14 @@ footer { color: var(--dim); font-size: 12px; padding-top: 24px; padding-bottom: 
       });
     });
     search.addEventListener("input", apply);
+    if (restored) {
+      if (restored.mode) {
+        mode = restored.mode;
+        document.querySelectorAll("[data-filter]").forEach(function (x) { x.classList.toggle("on", x.getAttribute("data-filter") === mode); });
+      }
+      if (restored.q) search.value = restored.q;
+    }
+    pageState = function () { return { mode: mode, q: search.value }; };
     apply();
   }
 
@@ -636,6 +679,49 @@ footer { color: var(--dim); font-size: 12px; padding-top: 24px; padding-bottom: 
       });
     });
     if (!show(location.hash.slice(1))) show(tabs[0].getAttribute("data-range"));
+  }
+
+  if (restored) {
+    // Re-apply the sort by clicking its header (once, or twice to reverse it).
+    var s = restored.sort, table = s && sortables[s.table];
+    var th = table && table.querySelectorAll("thead th")[s.col];
+    if (th) for (var i = 0; i < 2 && th.getAttribute("aria-sort") !== s.dir; i++) th.click();
+    if (restored.y) window.scrollTo(0, restored.y);
+  }
+
+  // Auto-refresh: every minute (and whenever the tab comes back into view), check version.json.
+  // When a newer publish is there, save the viewer's place and reload. Pages opened straight from
+  // disk (file://) can't check, so they don't try.
+  var meta = document.querySelector('meta[name="fnf-version"]');
+  if (meta && /^https?:$/.test(location.protocol) && window.fetch) {
+    var current = meta.getAttribute("content"), checking = false, TRIED = "fnf-tried";
+    function check() {
+      if (checking || document.hidden) return;
+      checking = true;
+      fetch("version.json?t=" + Date.now(), { cache: "no-store" })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (v) {
+          if (!v || !v.version || v.version === current) return;
+          // GitHub can take a moment to serve the new pages everywhere. If a reload for this version
+          // still brought back the old page, wait a few minutes before trying again.
+          var tried = null;
+          try { tried = JSON.parse(sessionStorage.getItem(TRIED) || "null"); } catch (e) { }
+          if (tried && tried.v === v.version && Date.now() - tried.at < 3 * 60 * 1000) return;
+          try {
+            sessionStorage.setItem(TRIED, JSON.stringify({ v: v.version, at: Date.now() }));
+            var state = pageState();
+            state.path = location.pathname;
+            state.y = window.scrollY;
+            state.sort = lastSort;
+            sessionStorage.setItem(RESTORE, JSON.stringify(state));
+          } catch (e) { }
+          location.reload();
+        })
+        .catch(function () { })
+        .then(function () { checking = false; });
+    }
+    setInterval(check, 60 * 1000);
+    document.addEventListener("visibilitychange", function () { if (!document.hidden) check(); });
   }
 })();
 """;
