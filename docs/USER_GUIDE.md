@@ -188,7 +188,8 @@ Sheets.
 The app can publish the **Matches** and **Stats** pages as a website anyone can open, on your phone,
 in Discord, wherever. It uses GitHub Pages, which is free. The site is just a copy of the pages:
 it has every game with the enemy names (linked to check-pvp.fr), and the stats for this season,
-all time, the last 30 days and the latest night. Your notes are left off.
+all time, the last 30 days and the latest night. Your notes are left off. Friends who run the
+app can also follow the site to get the games in their own copy (see below).
 
 **Only one of us needs to do this.** Whoever publishes should be the one with the merged games.
 
@@ -223,6 +224,31 @@ GitHub can take a few minutes before the page appears.
 The token is stored encrypted on your PC, separately from your games, so it is **not** included when
 you send your partner an export. **Forget token** removes it. If a publish says the token was
 rejected, it has probably expired: make a new one and paste it in.
+
+### Following a friend's site
+
+Friends who run FNF Tracker can keep their copy in step with your site, with no GitHub account or
+token. Each publish also puts the games on the site as data (`matches.json`, every game except your
+notes), and their app reads that.
+
+1. Send them your site address, e.g. `https://yourname.github.io/fnf-stats/`.
+2. In their app, Settings, under **Follow a friend's site**: paste the address and click **Sync now**.
+3. Leave **Sync every time the app starts** ticked and it stays up to date by itself.
+
+What syncing does:
+
+- **New games on the site** come in. If they already recorded the same game themselves (same result
+  and enemy classes within 10 minutes), theirs is kept and the site's copy is skipped.
+- **Your edits** replace their copy of that game, and **games you delete** are removed from theirs.
+  Any notes they wrote on a synced game are kept.
+- **Their own games** (from their addon) are never changed.
+- If they **delete** a synced game, it stays deleted; if they **edit** one, the next sync puts your
+  version back.
+- **Stop following** asks whether to keep the synced games as their own or remove them.
+
+If a partner used **Merge** on your exports before, their copies are recognised and simply start
+following the site; nothing is doubled up. The site needs to be published once from this version of
+the app (or later) before friends can sync from it.
 
 ---
 

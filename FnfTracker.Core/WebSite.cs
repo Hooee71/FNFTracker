@@ -62,12 +62,15 @@ public static class WebSite
             [Script] = Js,
             // Tells GitHub Pages to serve the files as they are (no Jekyll build step).
             [".nojekyll"] = "",
+            // The games as data, for friends' apps that follow this site (see SiteSync).
+            [SiteSync.DataFile] = SiteSync.BuildFeed(data),
         };
 
         // The version is a hash of everything else, so it changes exactly when the site does.
         var version = ShortHash(string.Concat(files.OrderBy(f => f.Key, StringComparer.Ordinal)
                                                    .Select(f => f.Key + "\0" + f.Value)));
-        foreach (var key in files.Keys.ToList()) files[key] = files[key].Replace(VersionToken, version);
+        foreach (var key in files.Keys.ToList())
+            if (key != SiteSync.DataFile) files[key] = files[key].Replace(VersionToken, version);
         files[VersionFile] = $"{{\"version\":\"{version}\",\"published\":\"{now.ToString("yyyy-MM-ddTHH:mm:ss", Inv)}\"}}\n";
         return files;
     }

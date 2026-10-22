@@ -98,6 +98,9 @@ A "night" runs 6 AM to 6 AM, so a Friday session that goes past midnight still c
   pages from the same `Stats` code as the app; `SitePublisher.cs` pushes them as one commit through the Git
   Data API). Needs a public repo and a fine-grained token for it with Contents, Pages and Administration read/write; the token
   is kept DPAPI-encrypted in `%LOCALAPPDATA%\FNFTracker\publish-token.dat`, never in `fnf-data.json`.
+- **Follow a friend's site:** each publish also uploads `matches.json` (all games, notes left out).
+  Another copy of the app can follow that site over plain HTTPS and mirror it (`SiteSync.cs`): new games
+  are added, the site's edits and deletes flow down, and the friend's own games and notes are untouched.
 
 ## Fonts
 

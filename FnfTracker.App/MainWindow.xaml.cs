@@ -86,6 +86,10 @@ public partial class MainWindow : Window
         {
             if (Settings.CheckForUpdates) await CheckForUpdatesAsync(userAsked: false);
         };
+        Loaded += async (_, _) =>
+        {
+            if (Settings.SyncSite != null && Settings.SyncOnStart) await SyncFromSiteAsync(auto: true);
+        };
     }
 
     // ───────────────────────── Per-tab art ─────────────────────────
@@ -448,17 +452,21 @@ public partial class MainWindow : Window
         if (!Persist()) return;
         Refresh();
         SelectMatch(row.Match.Id);
-        Status("Game updated.");
+        Status(row.Match.SyncedFrom is null
+            ? "Game updated."
+            : "Game updated. It comes from the site you follow, so the next sync puts back their version (your notes are kept).");
     }
 
     private void DeleteMatch(MatchRow row)
     {
         var m = row.Match;
         var what = $"{row.Night} game #{row.GameNo}: {(m.Won ? "win" : "loss")} vs {(m.Enemies.Count == 0 ? "unknown" : m.EnemyCompKey)}";
-        if (MessageBox.Show(this, $"Delete this game?\n\n{what}", "FNF Tracker",
+        var synced = m.SyncedFrom is null ? "" : "\n\nIt came from the site you follow; it won't come back when you sync.";
+        if (MessageBox.Show(this, $"Delete this game?\n\n{what}{synced}", "FNF Tracker",
                             MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
 
         _store.Delete(m.Id);
+        if (m.SyncedFrom != null && !Settings.SyncDismissedIds.Contains(m.Id)) Settings.SyncDismissedIds.Add(m.Id);
         if (!Persist()) return;
         Refresh();
         Status("Game deleted.");
@@ -1109,6 +1117,9 @@ public partial class MainWindow : Window
         PublishRepoBox.Text = Settings.PublishRepo ?? "";
         AutoPublishCheck.IsChecked = Settings.AutoPublish;
         RefreshPublishUi();
+        SyncSiteBox.Text = Settings.SyncSite ?? "";
+        SyncOnStartCheck.IsChecked = Settings.SyncOnStart;
+        RefreshSyncUi();
         RangeBox.ItemsSource = StatsRange.Options.Select(o => o.Label).ToList();
         RangeBox.SelectedIndex = Math.Max(0, StatsRange.Options.ToList().FindIndex(o => o.Kind == Settings.StatsRange));
         FromPicker.SelectedDate = Settings.StatsFrom;
@@ -1485,5 +1496,127 @@ public partial class MainWindow : Window
             PublishNowButton.IsEnabled = PublishBarButton.IsEnabled = true;
             PublishBarButton.Content = "Publish site";
         }
+    }
+
+    // ───────────────────────── Following a friend's site ─────────────────────────
+
+    private bool _syncing;
+
+    private void RefreshSyncUi()
+    {
+        if (Settings.SyncSite is null)
+        {
+            SyncStatusText.Text = "Not following a site.";
+            return;
+        }
+        var count = AllMatches.Count(m => m.SyncedFrom == Settings.SyncSite);
+        SyncStatusText.Text = $"Following {Settings.SyncSite} ({count} game(s) from it here)." +
+            (Settings.LastSyncedAt is DateTime t ? $"\nLast synced {t:ddd MMM d, h:mm tt}." : "\nNot synced yet.");
+    }
+
+    private async void SyncNow_Click(object sender, RoutedEventArgs e)
+    {
+        var text = SyncSiteBox.Text.Trim();
+        if (text.Length == 0)
+        {
+            Status("Paste your friend's site address first.", error: true);
+            return;
+        }
+        var site = SiteSync.NormalizeSiteUrl(text);
+        if (site is null)
+        {
+            Status("That doesn't look like a site address. It should look like https://name.github.io/fnf-stats/", error: true);
+            return;
+        }
+        if (SiteSync.IsOwnSite(site, Settings.PublishRepo))
+        {
+            Status("That's your own site. Follow a friend's site instead.", error: true);
+            return;
+        }
+        if (Settings.SyncSite != null && Settings.SyncSite != site && !SwitchAwayFromSite(Settings.SyncSite)) return;
+
+        Settings.SyncSite = site;
+        Settings.SyncOnStart = SyncOnStartCheck.IsChecked == true;
+        SyncSiteBox.Text = site;
+        if (!Persist()) return;
+        await SyncFromSiteAsync(auto: false);
+    }
+
+    /// <summary>
+    /// Pulls the followed site's games and brings this copy in step with them. Automatic syncs stay
+    /// quiet unless they change something or fail in a way worth knowing.
+    /// </summary>
+    private async Task SyncFromSiteAsync(bool auto)
+    {
+        if (_syncing || _loadFailed || Settings.SyncSite is not string site) return;
+        _syncing = true;
+        SyncNowButton.IsEnabled = false;
+        if (!auto) Status("Syncing from " + site + "…");
+        try
+        {
+            using var http = SiteSync.CreateClient(_currentVersion);
+            var feed = await SiteSync.FetchAsync(http, site);
+            if (Settings.SyncSite != site) return;   // they switched or stopped while we were fetching
+
+            var result = SiteSync.Apply(_store.Data, feed, site);
+            Settings.LastSyncedAt = DateTime.Now;
+            if (!Persist()) return;
+            if (result.Changed) Refresh();
+            RefreshSyncUi();
+            SyncStatusText.Text += "\n" + result.Summary();
+            if (!auto || result.Changed) Status("Sync: " + result.Summary());
+            if (result.Changed && Settings.AutoPublish) _ = PublishSiteAsync(auto: true);
+        }
+        catch (Exception ex)
+        {
+            var msg = ex is SyncException ? ex.Message : "Sync failed: " + ex.Message;
+            RefreshSyncUi();
+            SyncStatusText.Text += "\n" + msg;
+            Status(auto ? "Couldn't sync from the site you follow: " + msg : msg, error: true);
+        }
+        finally
+        {
+            _syncing = false;
+            SyncNowButton.IsEnabled = true;
+        }
+    }
+
+    private void StopFollowing_Click(object sender, RoutedEventArgs e)
+    {
+        if (Settings.SyncSite is not string site)
+        {
+            SyncSiteBox.Clear();
+            Status("You're not following a site.");
+            return;
+        }
+        if (!SwitchAwayFromSite(site)) return;
+        Settings.SyncSite = null;
+        Settings.LastSyncedAt = null;
+        SyncSiteBox.Clear();
+        if (!Persist()) return;
+        Refresh();
+        RefreshSyncUi();
+        Status("Stopped following " + site + ".");
+    }
+
+    /// <summary>
+    /// Asks what to do with the games a site brought in before leaving it: keep them as your own, or
+    /// remove them. False if the user cancels.
+    /// </summary>
+    private bool SwitchAwayFromSite(string site)
+    {
+        var games = AllMatches.Where(m => m.SyncedFrom == site).ToList();
+        if (games.Count > 0)
+        {
+            var answer = MessageBox.Show(this,
+                $"{games.Count} game(s) here came from {site}.\n\n" +
+                "Yes: keep them as your own (they stop updating).\nNo: remove them.\nCancel: change nothing.",
+                "FNF Tracker", MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
+            if (answer == MessageBoxResult.Cancel) return false;
+            if (answer == MessageBoxResult.Yes) foreach (var m in games) m.SyncedFrom = null;
+            else _store.Data.Matches.RemoveAll(m => m.SyncedFrom == site);
+        }
+        Settings.SyncDismissedIds.Clear();
+        return true;
     }
 }

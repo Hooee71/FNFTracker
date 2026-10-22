@@ -61,6 +61,12 @@ public sealed class Match
     public string? RecordedBy { get; set; }
 
     /// <summary>
+    /// Set on games that came from a followed site (its address). Sync keeps these in step with the
+    /// site: changes there replace them, and games removed there are removed here.
+    /// </summary>
+    public string? SyncedFrom { get; set; }
+
+    /// <summary>
     /// The arena "night" this match belongs to. Games before 6 AM count toward
     /// the previous evening, so a Friday session running past midnight stays Friday.
     /// </summary>
@@ -121,6 +127,18 @@ public sealed class AppSettings
 
     /// <summary>When the website was last published.</summary>
     public DateTime? LastPublishedAt { get; set; }
+
+    /// <summary>A friend's FNF site this app follows ("https://name.github.io/repo/"), or null.</summary>
+    public string? SyncSite { get; set; }
+
+    /// <summary>Pull the followed site's games each time the app starts.</summary>
+    public bool SyncOnStart { get; set; } = true;
+
+    /// <summary>When the followed site was last synced.</summary>
+    public DateTime? LastSyncedAt { get; set; }
+
+    /// <summary>Synced games you deleted here, so the next sync doesn't bring them back.</summary>
+    public List<Guid> SyncDismissedIds { get; set; } = new();
 }
 
 public sealed class ColumnLayout
