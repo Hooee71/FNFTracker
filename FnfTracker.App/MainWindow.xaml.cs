@@ -80,12 +80,23 @@ public partial class MainWindow : Window
         Closed += (_, _) => StopWatching();
 
         // Updates: tidy up after a previous update, then check GitHub in the background.
-        if (Environment.ProcessPath is string exe) Updater.CleanUpOldVersion(exe);
-        VersionText.Text = $"You're running FNF Tracker {_currentVersion.ToString(3)}.";
-        Loaded += async (_, _) =>
+        // The Microsoft Store build never does either: the Store installs updates, and the app's
+        // install folder is read-only there, so the self-updater couldn't swap the exe anyway.
+        if (IsStoreBuild)
         {
-            if (Settings.CheckForUpdates) await CheckForUpdatesAsync(userAsked: false);
-        };
+            VersionText.Text = $"You're running FNF Tracker {_currentVersion.ToString(3)} from the Microsoft Store, " +
+                               "which installs updates automatically.";
+            AutoUpdateCheck.Visibility = UpdateButtons.Visibility = UpdateStatusText.Visibility = Visibility.Collapsed;
+        }
+        else
+        {
+            if (Environment.ProcessPath is string exe) Updater.CleanUpOldVersion(exe);
+            VersionText.Text = $"You're running FNF Tracker {_currentVersion.ToString(3)}.";
+            Loaded += async (_, _) =>
+            {
+                if (Settings.CheckForUpdates) await CheckForUpdatesAsync(userAsked: false);
+            };
+        }
         Loaded += async (_, _) =>
         {
             if (Settings.SyncSite != null && Settings.SyncOnStart) await SyncFromSiteAsync(auto: true);
@@ -165,6 +176,13 @@ public partial class MainWindow : Window
 
     // ───────────────────────── Updates ─────────────────────────
 
+    /// <summary>True for the Microsoft Store package (built with -p:StoreBuild=true, see store\build-msix.ps1).</summary>
+#if STORE_BUILD
+    private static readonly bool IsStoreBuild = true;
+#else
+    private static readonly bool IsStoreBuild = false;
+#endif
+
     private async Task CheckForUpdatesAsync(bool userAsked)
     {
         UpdateStatusText.Text = "Checking for updates…";
@@ -196,7 +214,7 @@ public partial class MainWindow : Window
 
     private async void UpdateNow_Click(object sender, RoutedEventArgs e)
     {
-        if (_pendingUpdate is not UpdateInfo update || _updating) return;
+        if (IsStoreBuild || _pendingUpdate is not UpdateInfo update || _updating) return;
 
         var exe = Environment.ProcessPath;
         if (exe == null || Updater.IsDevelopmentBuild(exe))
