@@ -338,7 +338,10 @@ public static class WebSite
         sb.Append(Table("Game length", "Length", Stats.ByDuration(ms)));
         sb.Append(Table("Dampening at the end", "Dampening", Stats.ByDampening(ms),
             "Nothing yet. Dampening is read by the FNF addon (0.1.6 or newer) at the end of each game."));
-        sb.Append(Table("Day of week", "Day", Stats.ByWeekday(ms)));
+        sb.Append(CountTable("Jerk Factor", "Enemy team", Stats.JerkFactor(ms),
+            $"Rating gap between the two enemies (their personal ratings, not MMR). More than {Stats.CarryGap} apart: " +
+            $"\"{Stats.CarryLabel}\". Within {Stats.CarryGap}: \"{Stats.NormalLabel}\".",
+            "Nothing yet. Needs both enemies' ratings, which come from games recorded by the FNF addon."));
         sb.Append(Table("Nights", "Night", Stats.ByNight(ms)));
         sb.Append(Table("Tags", "Tag", Stats.ByTag(ms)));
         sb.Append(Table("Repeat opponents", "Player", Stats.RepeatOpponents(ms)));
@@ -404,6 +407,17 @@ public static class WebSite
                       $"<td class=\"r pct {GapClass(dps)}\" data-sort=\"{(g?.DpsPct is double d ? Num(d) : "")}\"{dpsTip}>{(dps.Length == 0 ? "—" : dps)}</td>" +
                       $"<td class=\"r pct {GapClass(hps)}\" data-sort=\"{(g?.HpsPct is double h ? Num(h) : "")}\"{hpsTip}>{(hps.Length == 0 ? "—" : hps)}</td></tr>");
         }
+        sb.Append(TableEnd);
+        return sb.ToString();
+    }
+
+    /// <summary>A label + game count table (no win rate), e.g. the Jerk Factor tally.</summary>
+    private static string CountTable(string title, string labelHeader, List<StatRow> rows, string tip, string emptyText)
+    {
+        if (rows.Count == 0) return Empty(title, emptyText);
+        var sb = new StringBuilder(TableStart(title, tip));
+        sb.Append($"<thead><tr><th>{H(labelHeader)}</th><th data-type=\"num\" class=\"r\">Games</th></tr></thead><tbody>");
+        foreach (var r in rows) sb.Append($"<tr><td>{H(r.Label)}</td><td class=\"r\">{r.Games}</td></tr>");
         sb.Append(TableEnd);
         return sb.ToString();
     }

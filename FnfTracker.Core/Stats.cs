@@ -170,8 +170,33 @@ public static class Stats
     public static List<StatRow> ByOurComp(IEnumerable<Match> ms) =>
         Group(ms.Select(m => (m.OurCompKey, m.Won)));
 
-    public static List<StatRow> ByWeekday(IEnumerable<Match> ms) =>
-        Group(ms.Select(m => (m.Night.DayOfWeek.ToString(), m.Won)));
+    /// <summary>Enemy rating gap above this (more than 100 apart) = one player carrying the other.</summary>
+    public const int CarryGap = 100;
+    public const string CarryLabel = "Clearly selling wins for gold";
+    public const string NormalLabel = "Most likely actual friends";
+
+    /// <summary>
+    /// "Jerk Factor": how many games had an enemy pair more than <see cref="CarryGap"/> rating
+    /// apart (a carry) vs. within it. Personal ratings, not MMR; games without both known are skipped.
+    /// </summary>
+    public static List<StatRow> JerkFactor(IEnumerable<Match> ms)
+    {
+        var rows = ms.Select(m => (Gap: EnemyRatingGap(m), m.Won))
+                     .Where(r => r.Gap != null)
+                     .Select(r => (r.Gap > CarryGap ? CarryLabel : NormalLabel, r.Won))
+                     .GroupBy(r => r.Item1)
+                     .Select(g => new StatRow(g.Key, g.Count(), g.Count(r => r.Won)))
+                     .ToList();
+        return rows.Count == 0 ? rows : new[] { CarryLabel, NormalLabel }
+            .Select(l => rows.FirstOrDefault(r => r.Label == l) ?? new StatRow(l, 0, 0)).ToList();
+    }
+
+    /// <summary>Rating difference between the two enemies, or null unless both are known.</summary>
+    public static int? EnemyRatingGap(Match m)
+    {
+        var r = m.Enemies.Where(e => !e.IsEmpty).Select(e => e.Rating).ToList();
+        return r.Count == 2 && r[0] is int a && r[1] is int b ? Math.Abs(a - b) : null;
+    }
 
     /// <summary>Most recent nights first.</summary>
     public static List<StatRow> ByNight(IEnumerable<Match> ms) =>

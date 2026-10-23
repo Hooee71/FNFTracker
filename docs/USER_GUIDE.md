@@ -156,9 +156,12 @@ The app remembers your choice.
   the addon-recorded games against it.
 - **Enemy healers** and **Enemy DPS:** your record against each class + spec, healers and DPS in
   separate tables.
+- **Jerk Factor:** how many games the enemy pair's personal ratings (not MMR) were more than 100
+  apart, *Clearly selling wins for gold*, vs. within 100, *Most likely actual friends*. Needs both
+  enemies' ratings, so addon-recorded games only.
 - **Win-rate tables**, broken down by:
   comp type (double DPS vs. with a healer), map, game number in
-  the night, game length, Dampening at the end (addon 0.1.6+ games), day of week, night, tag, and repeat opponents (players you've met more
+  the night, game length, Dampening at the end (addon 0.1.6+ games), night, tag, and repeat opponents (players you've met more
   than once). When there's enough data you'll also see enemy MMR vs. yours, and our comps if we've
   played more than one.
 

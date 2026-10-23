@@ -28,7 +28,7 @@ public partial class SlotEditor : UserControl
         set => NameGrid.Visibility = value ? Visibility.Visible : Visibility.Collapsed;
     }
 
-    // The slot last loaded, so the addon's scoreboard numbers (damage, healing) survive an edit.
+    // The slot last loaded, so the addon's scoreboard numbers (damage, healing, rating) survive an edit.
     private PlayerSlot? _loaded;
 
     public PlayerSlot Slot
@@ -40,6 +40,7 @@ public partial class SlotEditor : UserControl
             Name = string.IsNullOrWhiteSpace(NameBox.Text) ? null : NameBox.Text.Trim(),
             Damage = _loaded?.Damage,
             Healing = _loaded?.Healing,
+            Rating = _loaded?.Rating,
         };
         set
         {

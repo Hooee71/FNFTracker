@@ -13,6 +13,9 @@ public sealed class PlayerSlot
     public long? Damage { get; set; }
     public long? Healing { get; set; }
 
+    /// <summary>Their personal 2v2 rating going into the game, from the addon's scoreboard read.</summary>
+    public int? Rating { get; set; }
+
     [JsonIgnore]
     public bool IsEmpty => string.IsNullOrWhiteSpace(Class);
 
@@ -20,7 +23,7 @@ public sealed class PlayerSlot
     [JsonIgnore]
     public string Label => string.IsNullOrWhiteSpace(Spec) ? Class : $"{Spec} {Class}";
 
-    public PlayerSlot Clone() => new() { Class = Class, Spec = Spec, Name = Name, Damage = Damage, Healing = Healing };
+    public PlayerSlot Clone() => new() { Class = Class, Spec = Spec, Name = Name, Damage = Damage, Healing = Healing, Rating = Rating };
 }
 
 public sealed class Match

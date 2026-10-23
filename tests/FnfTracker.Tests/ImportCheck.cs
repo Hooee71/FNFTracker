@@ -56,6 +56,43 @@ public static class ImportCheck {
     var zeroData = new FnfData(); zeroData.Matches.Add(new Match { OurMmr = 0, EnemyMmr = 0 }); zeroData.Matches.Add(new Match { EnemyMmr = 1800 });
     Check(DataStore.ClearZeroMmr(zeroData) && zeroData.Matches[0].EnemyMmr == null && zeroData.Matches[0].OurMmr == null && zeroData.Matches[1].EnemyMmr == 1800, "saved 0 mmr cleared on load");
 
+    // Player ratings: imported, all-zero (hidden) boards give none, and older imports get them backfilled.
+    {
+      string Board(int a, int b, int c, int d) =>
+        $"[\"players\"] = {{ {{ [\"name\"] = \"Me\", [\"class\"] = \"MONK\", [\"team\"] = 0, [\"isMe\"] = true, [\"rating\"] = {a} }}, " +
+        $"{{ [\"name\"] = \"Pal\", [\"class\"] = \"PALADIN\", [\"team\"] = 0, [\"rating\"] = {b} }}, " +
+        $"{{ [\"name\"] = \"Booster-A\", [\"class\"] = \"ROGUE\", [\"team\"] = 1, [\"rating\"] = {c} }}, " +
+        $"{{ [\"name\"] = \"Buyer-B\", [\"class\"] = \"SHAMAN\", [\"team\"] = 1, [\"rating\"] = {d} }} }}";
+      string Db(string id, string board) =>
+        $"FNFTrackerDB = {{ [\"matches\"] = {{ {{ [\"id\"] = \"{id}\", [\"recordedBy\"] = \"Me-Realm\", [\"rated\"] = true, [\"myTeam\"] = 0, [\"winner\"] = 0, [\"endedAt\"] = 1792714618, {board} }} }} }}";
+      var carried = AddonImport.ToMatch(AddonImport.ReadRecords(Db("c1", Board(1960, 1955, 1597, 672)))[0], out _)!;
+      Check(carried.Enemies.Select(e => e.Rating).SequenceEqual(new int?[] { 1597, 672 }) && Stats.EnemyRatingGap(carried) == 925, $"enemy ratings imported, gap {Stats.EnemyRatingGap(carried)}");
+      var hidden = AddonImport.ToMatch(AddonImport.ReadRecords(Db("h1", Board(0, 0, 0, 0)))[0], out _)!;
+      Check(hidden.Enemies.All(e => e.Rating == null) && Stats.EnemyRatingGap(hidden) == null, "all-zero (hidden) ratings are not recorded");
+      var freshBoost = AddonImport.ToMatch(AddonImport.ReadRecords(Db("z1", Board(1960, 1955, 1800, 0)))[0], out _)!;
+      Check(freshBoost.Enemies[1].Rating == 0 && Stats.EnemyRatingGap(freshBoost) == 1800, "a real 0-rated enemy counts when the board isn't hidden");
+
+      // Backfill: a game imported before ratings were kept gets them on the next import, and nothing else changes.
+      var bRoot = Path.Combine(Path.GetTempPath(), "fnf-bf-" + Guid.NewGuid());
+      var bSv = Path.Combine(bRoot, "WTF", "Account", "X", "SavedVariables"); Directory.CreateDirectory(bSv);
+      File.WriteAllText(Path.Combine(bSv, "FNFTracker.lua"), Db("c1", Board(1960, 1955, 1597, 672)));
+      var bStore = new DataStore(Path.Combine(bRoot, "d.json")); bStore.Load();
+      Check(AddonImport.ImportInto(bStore, bRoot).Added == 1, "backfill setup import");
+      var stored = bStore.Data.Matches.Single();
+      foreach (var p in stored.Enemies.Concat(stored.OurTeam)) p.Rating = null;   // as saved by an older app
+      stored.Enemies[0].Name = "Booster-A";                                         // unchanged
+      var bf = AddonImport.ImportInto(bStore, bRoot);
+      Check(bf.Backfilled == 1 && bf.Added == 0 && bf.Changed && Stats.EnemyRatingGap(bStore.Data.Matches.Single()) == 925, "older game backfilled: " + bf.Summary());
+      Check(AddonImport.ImportInto(bStore, bRoot).Backfilled == 0, "backfill runs once");
+      Directory.Delete(bRoot, true);
+
+      var jf = Stats.JerkFactor(new[] { carried, freshBoost, hidden,
+        new Match { Won = true, Enemies = new() { new PlayerSlot { Class = "Mage", Rating = 1900 }, new PlayerSlot { Class = "Priest", Rating = 2000 } } } });
+      Check(jf.Select(r => $"{r.Label}: {r.Games}").SequenceEqual(new[] { "Clearly selling wins for gold: 2", "Most likely actual friends: 1" }),
+        "jerk factor (exactly 100 apart is friends): " + string.Join(", ", jf.Select(r => $"{r.Label}: {r.Games}")));
+      Check(Stats.JerkFactor(new[] { hidden }).Count == 0, "jerk factor empty without ratings");
+    }
+
     // Duplicate detection. Tonight's real pair: back-to-back wins vs Priest + Death Knight 9 minutes
     // apart were treated as one game, so the second (Nagrand) was never imported.
     PlayerSlot P(string spec, string cls) => new() { Spec = spec, Class = cls };

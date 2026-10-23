@@ -9,6 +9,8 @@ public sealed class AddonImportResult
     public int AlreadyHad { get; set; }
     public int NotTwoVTwo { get; set; }
     public int Unusable { get; set; }
+    /// <summary>Games already here that got newly recorded details (e.g. player ratings) filled in.</summary>
+    public int Backfilled { get; set; }
     public List<string> FilesRead { get; } = new();
     public List<string> Problems { get; } = new();
     public bool Changed { get; set; }
@@ -20,6 +22,7 @@ public sealed class AddonImportResult
         if (AlreadyHad > 0) parts.Add($"{AlreadyHad} already here");
         if (NotTwoVTwo > 0) parts.Add($"{NotTwoVTwo} non-2v2 skipped");
         if (Unusable > 0) parts.Add($"{Unusable} incomplete (left early?) skipped");
+        if (Backfilled > 0) parts.Add($"player ratings filled in on {Backfilled} game(s)");
         return string.Join(", ", parts) + ".";
     }
 }
@@ -95,7 +98,11 @@ public static class AddonImport
             foreach (var rec in records)
             {
                 var externalId = ExternalIdOf(rec);
-                if (imported.Contains(externalId)) continue;   // seen on an earlier import
+                if (imported.Contains(externalId))   // seen on an earlier import
+                {
+                    if (Backfill(store, rec)) { result.Backfilled++; result.Changed = true; }
+                    continue;
+                }
 
                 var match = ToMatch(rec, out var skip);
                 if (match == null)
@@ -164,6 +171,9 @@ public static class AddonImport
         var players = rec.Tables("players").ToList();
         if (players.Count != 4) { skip = SkipReason.NotTwoVTwo; return null; }
 
+        // Scoreboard ratings are all 0 when the client hid them; then none of them mean anything.
+        bool ratingsKnown = players.Any(p => p.Int("rating") > 0);
+
         var me = players.FirstOrDefault(p => p.Bool("isMe") == true);
         var myTeam = me?.Int("team") ?? rec.Int("myTeam");
         if (myTeam is null) { skip = SkipReason.NoTeam; return null; }
@@ -201,6 +211,7 @@ public static class AddonImport
                 Name = p.Str("name"),
                 Damage = p.Long("damage"),
                 Healing = p.Long("healing"),
+                Rating = ratingsKnown ? p.Int("rating") : null,
             };
         }
 
@@ -244,6 +255,31 @@ public static class AddonImport
     }
 
     private static int? Positive(int? v) => v > 0 ? v : null;
+
+    /// <summary>
+    /// Fills in player ratings on a game imported before the app kept them, matching players by
+    /// name. Only fills blanks, so nothing edited by hand is overwritten. True if anything changed.
+    /// </summary>
+    private static bool Backfill(DataStore store, LuaTable rec)
+    {
+        var existing = store.Data.Matches.FirstOrDefault(m => m.Id == StableGuid(ExternalIdOf(rec)));
+        if (existing == null) return false;   // deleted, or merged into another copy
+        var fresh = ToMatch(rec, out _);
+        if (fresh == null) return false;
+
+        bool changed = false;
+        void Fill(List<PlayerSlot> have, List<PlayerSlot> from)
+        {
+            foreach (var p in have.Where(p => p.Rating == null && !string.IsNullOrEmpty(p.Name)))
+            {
+                var src = from.FirstOrDefault(f => SameName(f.Name, p.Name));
+                if (src?.Rating != null) { p.Rating = src.Rating; changed = true; }
+            }
+        }
+        Fill(existing.Enemies, fresh.Enemies);
+        Fill(existing.OurTeam, fresh.OurTeam);
+        return changed;
+    }
 
     /// <summary>A side's team MMR from the record's "teams" list (one entry per faction 0/1).</summary>
     private static int? TeamMmr(LuaTable rec, int? faction) =>
