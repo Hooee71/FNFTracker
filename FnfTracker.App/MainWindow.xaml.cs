@@ -639,12 +639,9 @@ public partial class MainWindow : Window
         AddCard("Current rating", s.LatestRating?.ToString() ?? "-", Theme.Accent, target: RatingCards);
         AddCard("Peak rating", s.PeakRating?.ToString() ?? "-", Theme.Accent, target: RatingCards);
 
-        MmrHost.Children.Clear();
-        var mmrPanel = BuildMmrTable(Stats.OpponentMmrSummary(ms));
-        Grid.SetColumn(mmrPanel, 0);
-        MmrHost.Children.Add(mmrPanel);
-
-        StatTables.Children.Clear();
+        ClearStatColumns();
+        var mmr = Stats.OpponentMmrSummary(ms);
+        AddStatBlock(BuildMmrTable(mmr), mmr.Games == 0 ? 0 : 3);
         AddOutputTable("Damage & healing vs. them", "Result", Stats.OutputByResult(ms));
         AddTable("Enemy comps", "Comp", Stats.ByEnemyCompWithOutput(ms));
         AddTable("Enemy healers", "Spec", Stats.ByEnemySpec(ms, healers: true));
@@ -703,6 +700,30 @@ public partial class MainWindow : Window
             CornerRadius = new CornerRadius(8),
             Background = Theme.Make("#14FFFFFF"),
         });
+    }
+
+    // Rough height of each stats column so far, for packing tables into the shorter one.
+    private readonly double[] _statColumnHeight = new double[2];
+
+    private void ClearStatColumns()
+    {
+        StatColumnLeft.Children.Clear();
+        StatColumnRight.Children.Clear();
+        _statColumnHeight[0] = _statColumnHeight[1] = 0;
+    }
+
+    /// <summary>
+    /// Adds a stats block under whichever column is shorter. Heights are estimated from the row
+    /// count (tables are created before layout, so they can't be measured yet); tables stop
+    /// growing at their 300px MaxHeight and scroll.
+    /// </summary>
+    private void AddStatBlock(FrameworkElement block, int rows)
+    {
+        const double heading = 44, header = 30, row = 25, maxTable = 300, emptyNote = 32;
+        double height = heading + (rows == 0 ? emptyNote : Math.Min(header + rows * row, maxTable));
+        int col = _statColumnHeight[1] < _statColumnHeight[0] ? 1 : 0;
+        (col == 0 ? StatColumnLeft : StatColumnRight).Children.Add(block);
+        _statColumnHeight[col] += height;
     }
 
     /// <summary>The "MMR" table: highest, average and lowest opponent team MMR.</summary>
@@ -815,7 +836,7 @@ public partial class MainWindow : Window
                 TextWrapping = TextWrapping.Wrap,
                 Margin = new Thickness(0, 0, 0, 8),
             });
-            StatTables.Children.Add(panel);
+            AddStatBlock(panel, 0);
             return;
         }
 
@@ -889,7 +910,7 @@ public partial class MainWindow : Window
         };
 
         panel.Children.Add(grid);
-        StatTables.Children.Add(panel);
+        AddStatBlock(panel, rows.Count);
     }
 
     private void AddTable(string title, string labelHeader, List<StatRow> rows) =>
@@ -909,7 +930,7 @@ public partial class MainWindow : Window
         if (rows.Count == 0)
         {
             panel.Children.Add(new TextBlock { Text = "Nothing yet.", Opacity = 0.5, Margin = new Thickness(0, 0, 0, 8) });
-            StatTables.Children.Add(panel);
+            AddStatBlock(panel, 0);
             return;
         }
 
@@ -1000,7 +1021,7 @@ public partial class MainWindow : Window
         };
 
         panel.Children.Add(grid);
-        StatTables.Children.Add(panel);
+        AddStatBlock(panel, rows.Count);
     }
 
     private void DrawRating()
