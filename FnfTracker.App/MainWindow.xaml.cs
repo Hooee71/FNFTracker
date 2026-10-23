@@ -650,6 +650,7 @@ public partial class MainWindow : Window
         AddTable("Maps", "Map", Stats.ByMap(ms));
         AddTable("Game number in the night", "Games", Stats.ByGameNumber(ms));
         AddTable("Game length", "Length", Stats.ByDuration(ms));
+        AddTable("Dampening at the end", "Dampening", Stats.ByDampening(ms), emptyText: DampeningEmpty);
         AddTable("Day of week", "Day", Stats.ByWeekday(ms));
         AddTable("Nights", "Night", Stats.ByNight(ms));
         AddTable("Tags", "Tag", Stats.ByTag(ms));
@@ -913,14 +914,16 @@ public partial class MainWindow : Window
         AddStatBlock(panel, rows.Count);
     }
 
-    private void AddTable(string title, string labelHeader, List<StatRow> rows) =>
-        AddTable(title, labelHeader, rows.Select(r => new StatView(r)).ToList(), withOutput: false);
+    private const string DampeningEmpty = "Nothing yet. Dampening is read by the FNF addon (0.1.6 or newer) at the end of each game.";
+
+    private void AddTable(string title, string labelHeader, List<StatRow> rows, string emptyText = "Nothing yet.") =>
+        AddTable(title, labelHeader, rows.Select(r => new StatView(r)).ToList(), withOutput: false, emptyText);
 
     /// <summary>A stats table with our DPS/HPS vs. them alongside the record (enemy comps).</summary>
     private void AddTable(string title, string labelHeader, List<(StatRow Row, OutputGap? Output)> rows) =>
         AddTable(title, labelHeader, rows.Select(r => new StatView(r.Row, r.Output)).ToList(), withOutput: true);
 
-    private void AddTable(string title, string labelHeader, List<StatView> rows, bool withOutput)
+    private void AddTable(string title, string labelHeader, List<StatView> rows, bool withOutput, string emptyText = "Nothing yet.")
     {
         var panel = new StackPanel { Margin = new Thickness(0, 0, 16, 16) };
         var heading = new TextBlock { Text = title, FontSize = 17, Margin = new Thickness(0, 6, 0, 6) };
@@ -929,7 +932,7 @@ public partial class MainWindow : Window
 
         if (rows.Count == 0)
         {
-            panel.Children.Add(new TextBlock { Text = "Nothing yet.", Opacity = 0.5, Margin = new Thickness(0, 0, 0, 8) });
+            panel.Children.Add(new TextBlock { Text = emptyText, Opacity = 0.5, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 8) });
             AddStatBlock(panel, 0);
             return;
         }
@@ -1413,7 +1416,7 @@ public partial class MainWindow : Window
         static string Pct(double? p) => p?.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) ?? "";
         var numbers = Stats.GameNumbers(AllMatches);
         var sb = new StringBuilder();
-        sb.AppendLine("PlayedAt,Night,GameNo,Result,Map,OurComp,Enemy1,Enemy1Name,Enemy2,Enemy2Name,RatingAfter,RatingChange,LengthSeconds,OurDamage,TheirDamage,OurHealing,TheirHealing,DpsVsPct,HpsVsPct,Tags,Notes,RecordedBy");
+        sb.AppendLine("PlayedAt,Night,GameNo,Result,Map,OurComp,Enemy1,Enemy1Name,Enemy2,Enemy2Name,RatingAfter,RatingChange,LengthSeconds,DampeningPct,OurDamage,TheirDamage,OurHealing,TheirHealing,DpsVsPct,HpsVsPct,Tags,Notes,RecordedBy");
         foreach (var m in AllMatches.OrderBy(m => m.PlayedAt))
         {
             var e1 = m.Enemies.ElementAtOrDefault(0);
@@ -1424,6 +1427,7 @@ public partial class MainWindow : Window
                 Q(e1?.Label), Q(e1?.Name), Q(e2?.Label), Q(e2?.Name),
                 m.RatingAfter?.ToString() ?? "", m.RatingChange?.ToString() ?? "",
                 m.DurationSeconds?.ToString() ?? "",
+                m.DampeningPct?.ToString() ?? "",
                 Stats.OurDamage(m)?.ToString() ?? "", Stats.TheirDamage(m)?.ToString() ?? "",
                 Stats.OurHealing(m)?.ToString() ?? "", Stats.TheirHealing(m)?.ToString() ?? "",
                 Pct(Stats.DpsVs(m)), Pct(Stats.HpsVs(m)),

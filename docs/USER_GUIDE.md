@@ -45,7 +45,7 @@ Open the **Settings** tab.
 ## 3. The addon: games record themselves
 
 The FNF addon watches your arena games and records each one automatically: both enemies' specs and
-names, map, win or loss, game length, rating change and MMR. With it installed you don't need to
+names, map, win or loss, game length, Dampening at the end, rating change and MMR. With it installed you don't need to
 type anything in.
 
 **Only one of us needs it**, since we're in the same games. Running it on both PCs does no harm.
@@ -117,7 +117,7 @@ with names; click a name to open that player's check-pvp.fr profile), **Map**, *
 `DPS -18%` means you did 18% less damage than they did. Green when you were ahead, red when you were
 behind, with a small bar that grows right (ahead) or left (behind) from a centre tick and fills at a
 50% gap. Both teams play the same length of game, so the gap in totals is the same as the gap in DPS
-and HPS. Hover the cell for the actual totals, per-second rates and game length. Sorting the column
+and HPS. Hover the cell for the actual totals, per-second rates, game length and Dampening at the end. Sorting the column
 sorts by the damage gap. (Game length is still recorded, and editable from the pencil.)
 
 HPS turns grey when the teams brought a different number of healers: a healer comp out-heals double
@@ -158,7 +158,7 @@ The app remembers your choice.
   separate tables.
 - **Win-rate tables**, broken down by:
   comp type (double DPS vs. with a healer), map, game number in
-  the night, game length, day of week, night, tag, and repeat opponents (players you've met more
+  the night, game length, Dampening at the end (addon 0.1.6+ games), day of week, night, tag, and repeat opponents (players you've met more
   than once). When there's enough data you'll also see enemy MMR vs. yours, and our comps if we've
   played more than one.
 

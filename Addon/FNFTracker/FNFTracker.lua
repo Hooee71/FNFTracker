@@ -3,8 +3,8 @@ FNF Tracker addon
 
 Records each arena match into FNFTrackerDB (account-wide SavedVariables) so
 the FNF Tracker desktop app can import it. It is read-only: it never acts on
-your behalf. It only listens to events and reads the scoreboard, plus your
-own spec and your partner's (the same info right-click > Inspect shows) as a
+your behalf. It only listens to events and reads the scoreboard and the
+Dampening percentage on you, plus your own spec and your partner's (the same info right-click > Inspect shows) as a
 backup in case the scoreboard hides them.
 
 WoW writes SavedVariables to disk on /reload, logout or exit, so the app
@@ -17,11 +17,12 @@ match ends so the final copy has the real numbers. The app does all the math.
 ]]
 
 local ADDON_NAME = ...
-local VERSION = "0.1.5"
+local VERSION = "0.1.6"
 local ICON = "|TInterface\\AddOns\\FNFTracker\\Icon:0|t"
 local TWO_V_TWO_BRACKET = 1 -- GetPersonalRatedInfo bracket index for 2v2
 
 local current        -- the arena we're in right now
+local DAMPENING_SPELL = 110310
 local lastRecord     -- most recent saved record (gets post-match rating on exit)
 local wantRating     -- waiting to read 2v2 rating after leaving an arena
 
@@ -277,6 +278,7 @@ local function CaptureScoreboard()
     rec.players = players
     rec.prep = current.prep
     rec.team = current.team
+    rec.dampening = current.dampening
     CaptureTeamMmr(rec)
     rec.hiddenFields = hidden > 0 and hidden or nil
     lastRecord = rec
@@ -286,8 +288,20 @@ local function CaptureScoreboard()
     end
 end
 
+-- Dampening is a debuff on every player; each stack is 1% less healing. Read
+-- once, the moment the match ends. Nothing is saved if it's already gone or
+-- still secret then.
+local function ReadDampening()
+    if not current then return end
+    local aura = C_UnitAuras and Try(C_UnitAuras.GetPlayerAuraBySpellID, DAMPENING_SPELL)
+    if not aura then return end
+    local stacks = Clean(aura.applications)
+    if stacks and stacks > 0 then current.dampening = stacks end
+end
+
 local function OnMatchComplete(winner, duration)
     if not current then StartMatch() end
+    ReadDampening()
     current.completed = true
     current.endedAt = time()
     current.winner = Clean(winner)
