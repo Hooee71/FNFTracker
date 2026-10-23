@@ -651,7 +651,8 @@ public partial class MainWindow : Window
         AddTable("Game number in the night", "Games", Stats.ByGameNumber(ms));
         AddTable("Game length", "Length", Stats.ByDuration(ms));
         AddTable("Dampening at the end", "Dampening", Stats.ByDampening(ms), emptyText: DampeningEmpty);
-        AddTable("Day of week", "Day", Stats.ByWeekday(ms));
+        AddCountTable("Jerk Factor", "Enemy team", Stats.JerkFactor(ms), JerkFactorTip,
+                      "Nothing yet. Needs both enemies' ratings, which come from games recorded by the FNF addon.");
         AddTable("Nights", "Night", Stats.ByNight(ms));
         AddTable("Tags", "Tag", Stats.ByTag(ms));
         AddTable("Repeat opponents", "Player", Stats.RepeatOpponents(ms));
@@ -910,6 +911,53 @@ public partial class MainWindow : Window
             });
         };
 
+        panel.Children.Add(grid);
+        AddStatBlock(panel, rows.Count);
+    }
+
+    // One line per tier: WPF tooltips don't wrap.
+    private static readonly string JerkFactorTip =
+        Stats.JerkFactorRule.Replace("MMR). ", "MMR).\n").Replace("\". ", "\".\n");
+
+    /// <summary>A label + game count table (no win rate), e.g. the Jerk Factor tally.</summary>
+    private void AddCountTable(string title, string labelHeader, List<StatRow> rows, string tip, string emptyText)
+    {
+        var panel = new StackPanel { Margin = new Thickness(0, 0, 16, 16), ToolTip = tip };
+        var heading = new TextBlock { Text = title, FontSize = 17, Margin = new Thickness(0, 6, 0, 6) };
+        heading.SetResourceReference(TextBlock.FontFamilyProperty, "HeadingFont");
+        panel.Children.Add(heading);
+
+        if (rows.Count == 0)
+        {
+            panel.Children.Add(new TextBlock { Text = emptyText, Opacity = 0.5, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 8) });
+            AddStatBlock(panel, 0);
+            return;
+        }
+
+        var grid = new DataGrid
+        {
+            AutoGenerateColumns = false,
+            IsReadOnly = true,
+            HeadersVisibility = DataGridHeadersVisibility.Column,
+            GridLinesVisibility = DataGridGridLinesVisibility.None,
+            SelectionMode = DataGridSelectionMode.Single,
+            CanUserResizeRows = false,
+            CanUserSortColumns = false,
+            ItemsSource = rows.Select(r => new StatView(r)).ToList(),
+        };
+        grid.Columns.Add(new DataGridTextColumn
+        {
+            Header = labelHeader,
+            Binding = new Binding(nameof(StatView.Label)),
+            Width = new DataGridLength(1, DataGridLengthUnitType.Star),
+        });
+        grid.Columns.Add(new DataGridTextColumn { Header = "Games", Binding = new Binding(nameof(StatView.Games)), Width = DataGridLength.Auto, MinWidth = 64 });
+        grid.PreviewMouseWheel += (_, e) =>
+        {
+            if (e.Handled) return;
+            e.Handled = true;
+            panel.RaiseEvent(new MouseWheelEventArgs(e.MouseDevice, e.Timestamp, e.Delta) { RoutedEvent = MouseWheelEvent, Source = grid });
+        };
         panel.Children.Add(grid);
         AddStatBlock(panel, rows.Count);
     }
@@ -1254,7 +1302,7 @@ public partial class MainWindow : Window
         if (result.Problems.Count > 0) Status("Addon import problem — see Settings.", error: true);
         else if (!auto || result.Added > 0) Status("Addon: " + result.Summary());
 
-        if (result.Added > 0 && Settings.AutoPublish) _ = PublishSiteAsync(auto: true);
+        if ((result.Added > 0 || result.Backfilled > 0) && Settings.AutoPublish) _ = PublishSiteAsync(auto: true);
     }
 
     private void StartWatching()
