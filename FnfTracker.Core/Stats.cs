@@ -170,20 +170,20 @@ public static class Stats
     public static List<StatRow> ByOurComp(IEnumerable<Match> ms) =>
         Group(ms.Select(m => (m.OurCompKey, m.Won)));
 
-    /// <summary>Enemy rating gap above this (more than 100 apart) = one player carrying the other.</summary>
-    public const int CarryGap = 100;
+    /// <summary>Enemy rating gap of this or more (500+ apart) = one player carrying the other.</summary>
+    public const int CarryGap = 500;
     public const string CarryLabel = "Clearly selling wins for gold";
     public const string NormalLabel = "Most likely actual friends";
 
     /// <summary>
-    /// "Jerk Factor": how many games had an enemy pair more than <see cref="CarryGap"/> rating
-    /// apart (a carry) vs. within it. Personal ratings, not MMR; games without both known are skipped.
+    /// "Jerk Factor": how many games had an enemy pair <see cref="CarryGap"/> or more rating
+    /// apart (a carry) vs. closer than that. Personal ratings, not MMR; games without both known are skipped.
     /// </summary>
     public static List<StatRow> JerkFactor(IEnumerable<Match> ms)
     {
         var rows = ms.Select(m => (Gap: EnemyRatingGap(m), m.Won))
                      .Where(r => r.Gap != null)
-                     .Select(r => (r.Gap > CarryGap ? CarryLabel : NormalLabel, r.Won))
+                     .Select(r => (r.Gap >= CarryGap ? CarryLabel : NormalLabel, r.Won))
                      .GroupBy(r => r.Item1)
                      .Select(g => new StatRow(g.Key, g.Count(), g.Count(r => r.Won)))
                      .ToList();

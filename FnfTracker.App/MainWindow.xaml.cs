@@ -917,7 +917,7 @@ public partial class MainWindow : Window
 
     private static readonly string JerkFactorTip =
         $"Rating gap between the two enemies (their personal ratings, not MMR).\n" +
-        $"More than {Stats.CarryGap} apart: \"{Stats.CarryLabel}\". Within {Stats.CarryGap}: \"{Stats.NormalLabel}\".";
+        $"{Stats.CarryGap}+ apart: \"{Stats.CarryLabel}\". Under {Stats.CarryGap}: \"{Stats.NormalLabel}\".";
 
     /// <summary>A label + game count table (no win rate), e.g. the Jerk Factor tally.</summary>
     private void AddCountTable(string title, string labelHeader, List<StatRow> rows, string tip, string emptyText)

@@ -87,9 +87,11 @@ public static class ImportCheck {
       Directory.Delete(bRoot, true);
 
       var jf = Stats.JerkFactor(new[] { carried, freshBoost, hidden,
-        new Match { Won = true, Enemies = new() { new PlayerSlot { Class = "Mage", Rating = 1900 }, new PlayerSlot { Class = "Priest", Rating = 2000 } } } });
-      Check(jf.Select(r => $"{r.Label}: {r.Games}").SequenceEqual(new[] { "Clearly selling wins for gold: 2", "Most likely actual friends: 1" }),
-        "jerk factor (exactly 100 apart is friends): " + string.Join(", ", jf.Select(r => $"{r.Label}: {r.Games}")));
+        new Match { Won = true, Enemies = new() { new PlayerSlot { Class = "Mage", Rating = 1900 }, new PlayerSlot { Class = "Priest", Rating = 2000 } } },
+        new Match { Won = false, Enemies = new() { new PlayerSlot { Class = "Mage", Rating = 1500 }, new PlayerSlot { Class = "Priest", Rating = 2000 } } },
+        new Match { Won = false, Enemies = new() { new PlayerSlot { Class = "Mage", Rating = 1501 }, new PlayerSlot { Class = "Priest", Rating = 2000 } } } });
+      Check(jf.Select(r => $"{r.Label}: {r.Games}").SequenceEqual(new[] { "Clearly selling wins for gold: 3", "Most likely actual friends: 2" }),
+        "jerk factor (500 apart is a carry, 499 is friends): " + string.Join(", ", jf.Select(r => $"{r.Label}: {r.Games}")));
       Check(Stats.JerkFactor(new[] { hidden }).Count == 0, "jerk factor empty without ratings");
     }
 
