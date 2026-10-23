@@ -35,6 +35,8 @@ public sealed class MatchRow
     public string ResultText => Match.Won ? "W" : "L";
     public Brush ResultBrush => Match.Won ? Theme.Win : Theme.Loss;
     public string Map => Match.Map;
+    public string? Dampening => Match.DampeningPct is int d ? $"Dampening {d}%" : null;
+    public Visibility DampeningVisibility => Match.DampeningPct.HasValue ? Visibility.Visible : Visibility.Collapsed;
     public string Enemies => Match.EnemyCompKey;
     public List<Chip> EnemyChips { get; }
     public int? Rating => Match.RatingAfter;
@@ -69,7 +71,6 @@ public sealed class MatchRow
             var tip = $"Damage   us {Side(Stats.OurDamage(Match))}  ·  them {Side(Stats.TheirDamage(Match))}\n" +
                       $"Healing  us {Side(Stats.OurHealing(Match))}  ·  them {Side(Stats.TheirHealing(Match))}";
             if (secs > 0) tip += $"\nLength   {Duration}";
-            if (Match.DampeningPct is int damp) tip += $"\nDampening at the end   {damp}%";
             if (!Stats.HealingComparable(Match))
                 tip += "\n\nHealing is greyed out: the teams brought a different number of healers, so it isn't a like-for-like comparison.";
             return tip;

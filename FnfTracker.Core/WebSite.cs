@@ -225,7 +225,7 @@ public static class WebSite
             sb.Append($"<td class=\"c result {(m.Won ? "win" : "loss")}\">{(m.Won ? "W" : "L")}</td>");
             sb.Append("<td>").Append(string.Concat(enemies.Select(e => Chip(e, homeRealm, settings.Region, showName: true)))).Append("</td>");
             sb.Append("<td class=\"ours\">").Append(string.Concat(ours.Select(p => Chip(p, null, settings.Region, showName: false)))).Append("</td>");
-            sb.Append($"<td>{H(m.Map)}{TagsHtml(m.Tags)}</td>");
+            sb.Append($"<td>{H(m.Map)}{(m.DampeningPct is int damp ? $"<div class=\"damp\">Dampening {damp}%</div>" : "")}{TagsHtml(m.Tags)}</td>");
             sb.Append($"<td class=\"c\">{m.RatingAfter}</td>");
             sb.Append($"<td class=\"c {(m.RatingChange < 0 ? "loss" : "win")}\" data-sort=\"{m.RatingChange}\">{change}</td>");
             sb.Append($"<td class=\"c\">{m.EnemyMmr}</td>");
@@ -574,6 +574,7 @@ tbody tr:hover { background: rgba(255,255,255,.03); }
 .chip .name { font-size: 12px; color: rgba(216,218,224,.6); text-decoration: none; }
 .chip a.name:hover { color: var(--accent); text-decoration: underline; }
 .ours .chip b { font-weight: 400; }
+.damp { font-size: 12px; color: var(--dim); margin-top: 1px; }
 .tags { margin-top: 2px; }
 .tags span { font-size: 11px; color: var(--dim); background: rgba(255,255,255,.06); border-radius: 4px; padding: 1px 6px; margin-right: 4px; }
 .output { display: inline-block; text-align: left; cursor: help; }
