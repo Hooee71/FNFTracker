@@ -409,14 +409,16 @@
                                 <Canvas x:Name="RatingCanvas" ClipToBounds="True" SizeChanged="RatingCanvas_SizeChanged" />
                             </Border>
 
-                            <!-- MMR sits in the left column, directly above Enemy comps. -->
-                            <Grid x:Name="MmrHost" Margin="0,8,0,0">
+                            <!-- Two independent columns: each table goes under whichever column is shorter,
+                                 so a short table isn't padded out to the height of the tallest one. -->
+                            <Grid Margin="0,8,0,0">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
+                                <StackPanel x:Name="StatColumnLeft" Grid.Column="0" />
+                                <StackPanel x:Name="StatColumnRight" Grid.Column="1" />
                             </Grid>
-                            <UniformGrid x:Name="StatTables" Columns="2" />
                         </StackPanel>
                     </ScrollViewer>
                 </TabItem>

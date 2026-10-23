@@ -592,8 +592,10 @@ tbody tr:hover { background: rgba(255,255,255,.03); }
 .chart .pt:hover { fill: var(--accent); }
 .chart .last { fill: var(--accent); }
 .chart .empty { padding: 80px 16px; margin: 0; }
-.tables { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 20px; margin-top: 20px; }
-@media (max-width: 900px) { .tables { grid-template-columns: minmax(0, 1fr); } }
+.tables { columns: 2; column-gap: 20px; margin-top: 20px; }
+.tables > section { break-inside: avoid; display: inline-block; width: 100%; margin-bottom: 16px; }
+.tables h3 { margin-top: 0; }
+@media (max-width: 900px) { .tables { columns: 1; } }
 .stat-scroll { max-height: 320px; overflow: auto; background: var(--surface); border-radius: 8px; }
 .pct { font-weight: 600; }
 .empty { color: var(--dim); }
