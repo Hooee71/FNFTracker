@@ -110,11 +110,39 @@ public sealed class DataStore
     /// <summary>
     /// Same result, same enemy classes, within 10 minutes. Compares classes rather than
     /// specs so a hand-entered game without specs still matches the addon's copy.
+    /// That alone is too loose for back-to-back games against the same classes, so:
+    /// two games recorded by the same character's addon are always different games
+    /// (it records each game once, under its own id), and a known map or spec that
+    /// differs means a different game.
     /// </summary>
     public static bool IsSameGame(Match a, Match b) =>
         a.Won == b.Won
         && Math.Abs((a.PlayedAt - b.PlayedAt).TotalMinutes) <= 10
-        && EnemyClassKey(a) == EnemyClassKey(b);
+        && EnemyClassKey(a) == EnemyClassKey(b)
+        && !BothFromSameAddon(a, b)
+        && !Differs(a.Map, b.Map)
+        && !Differs(EnemySpecKey(a), EnemySpecKey(b));
+
+    /// <summary>Both imported by the addon on the same character ("Sackpuncher-Sargeras" and "Sackpuncher-" count as one).</summary>
+    private static bool BothFromSameAddon(Match a, Match b) =>
+        a.ExternalId != null && b.ExternalId != null
+        && string.Equals(Recorder(a.ExternalId), Recorder(b.ExternalId), StringComparison.OrdinalIgnoreCase);
+
+    // ExternalId is "Name-Realm/addon-id"; the realm is sometimes blank, so compare the name only.
+    private static string Recorder(string externalId) => externalId.Split('/')[0].Split('-')[0];
+
+    /// <summary>Both known and not equal. A blank (hand-entered game without it) never counts as different.</summary>
+    private static bool Differs(string? x, string? y) =>
+        !string.IsNullOrWhiteSpace(x) && !string.IsNullOrWhiteSpace(y)
+        && !string.Equals(x.Trim(), y.Trim(), StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>Enemy specs, or "" unless every enemy's spec is known.</summary>
+    private static string EnemySpecKey(Match m)
+    {
+        var enemies = m.Enemies.Where(e => !e.IsEmpty).ToList();
+        if (enemies.Count == 0 || enemies.Any(e => string.IsNullOrWhiteSpace(e.Spec))) return "";
+        return string.Join("+", enemies.Select(e => $"{e.Spec} {e.Class}".ToLowerInvariant()).OrderBy(s => s, StringComparer.Ordinal));
+    }
 
     private static string EnemyClassKey(Match m) =>
         string.Join("+", m.Enemies.Where(e => !e.IsEmpty)

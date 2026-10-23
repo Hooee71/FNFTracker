@@ -51,6 +51,27 @@ public static class ImportCheck {
     var zeroData = new FnfData(); zeroData.Matches.Add(new Match { OurMmr = 0, EnemyMmr = 0 }); zeroData.Matches.Add(new Match { EnemyMmr = 1800 });
     Check(DataStore.ClearZeroMmr(zeroData) && zeroData.Matches[0].EnemyMmr == null && zeroData.Matches[0].OurMmr == null && zeroData.Matches[1].EnemyMmr == 1800, "saved 0 mmr cleared on load");
 
+    // Duplicate detection. Tonight's real pair: back-to-back wins vs Priest + Death Knight 9 minutes
+    // apart were treated as one game, so the second (Nagrand) was never imported.
+    PlayerSlot P(string spec, string cls) => new() { Spec = spec, Class = cls };
+    var at = new DateTime(2026, 10, 22, 21, 47, 0);
+    var empyrean = new Match { PlayedAt = at, Won = true, Map = "Empyrean Domain", Source = "addon",
+      ExternalId = "Sackpuncher-Sargeras/20261022-214243-4967", Enemies = new() { P("Discipline", "Priest"), P("Unholy", "Death Knight") } };
+    var nagrand = new Match { PlayedAt = at.AddMinutes(9), Won = true, Map = "Nagrand Arena", Source = "addon",
+      ExternalId = "Sackpuncher-/20261022-215314-7061", Enemies = new() { P("Holy", "Priest"), P("Unholy", "Death Knight") } };
+    Check(!DataStore.IsSameGame(empyrean, nagrand), "back-to-back games vs same classes are different games");
+    var rematch = new Match { PlayedAt = at.AddMinutes(8), Won = true, Map = "Empyrean Domain", Source = "addon",
+      ExternalId = "Sackpuncher-Sargeras/20261022-215000-1111", Enemies = new() { P("Discipline", "Priest"), P("Unholy", "Death Knight") } };
+    Check(!DataStore.IsSameGame(empyrean, rematch), "same addon never merges its own two games, even same map + specs");
+    var partnerCopy = new Match { PlayedAt = at.AddMinutes(1), Won = true, Map = "Empyrean Domain", Source = "addon",
+      ExternalId = "Corpsehmper-Sargeras/20261022-214245-2222", Enemies = new() { P("Discipline", "Priest"), P("Unholy", "Death Knight") } };
+    Check(DataStore.IsSameGame(empyrean, partnerCopy), "partner's addon copy of the same game still matches");
+    var partnerOther = new Match { PlayedAt = at.AddMinutes(9), Won = true, Map = "Nagrand Arena", Source = "addon",
+      ExternalId = "Corpsehmper-Sargeras/20261022-215316-3333", Enemies = new() { P("Holy", "Priest"), P("Unholy", "Death Knight") } };
+    Check(!DataStore.IsSameGame(empyrean, partnerOther), "partner's copy of a different game (other map) does not match");
+    var byHand = new Match { PlayedAt = at.AddMinutes(2), Won = true, Enemies = new() { new PlayerSlot { Class = "Priest" }, new PlayerSlot { Class = "Death Knight" } } };
+    Check(DataStore.IsSameGame(empyrean, byHand), "hand-entered game without map/specs still matches the addon copy");
+
     // Parser edge cases
     var g = LuaSavedVariablesReader.Parse("X = {\n \"a\\\\b\\n\", -- [1]\n -5.5e2, -- comment\n true, [4] = false, [\"k\"] = { },\n}\nY = -inf\n");
     var x = (LuaTable)g["X"]!;

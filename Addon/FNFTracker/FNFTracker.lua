@@ -17,7 +17,7 @@ match ends so the final copy has the real numbers. The app does all the math.
 ]]
 
 local ADDON_NAME = ...
-local VERSION = "0.1.4"
+local VERSION = "0.1.5"
 local ICON = "|TInterface\\AddOns\\FNFTracker\\Icon:0|t"
 local TWO_V_TWO_BRACKET = 1 -- GetPersonalRatedInfo bracket index for 2v2
 
@@ -82,10 +82,18 @@ local function NewId()
     return date("%Y%m%d-%H%M%S") .. "-" .. math.random(1000, 9999)
 end
 
+-- "Name-Realm". The realm can be missing for a moment after a loading screen,
+-- so this is read again when the record is saved.
+local function RecordedBy()
+    local realm = Clean(Try(GetNormalizedRealmName))
+    if not realm or realm == "" then
+        realm = (Clean(Try(GetRealmName)) or ""):gsub("[%s%-]", "")
+    end
+    return UnitName("player") .. "-" .. realm
+end
+
 local function StartMatch()
     local mapName, _, _, _, _, _, _, instanceID = GetInstanceInfo()
-    local playerName = UnitName("player")
-    local realm = Try(GetNormalizedRealmName) or ""
     current = {
         id = NewId(),
         startedAt = time(),
@@ -94,7 +102,7 @@ local function StartMatch()
         teamSize = ArenaTeamSize(),
         rated = Clean(Try(C_PvP.IsRatedArena)) and true or false,
         skirmish = Clean(Try(IsArenaSkirmish)) and true or false,
-        recordedBy = playerName .. "-" .. realm,
+        recordedBy = RecordedBy(),
         prep = {},
         team = {},
     }
@@ -246,6 +254,9 @@ local function CaptureScoreboard()
     local rec = current.record
     local isNew = rec == nil
     if isNew then
+        -- Fill in the realm if it was missing when the match started. Only before the
+        -- first save: recordedBy is part of the id the app imports by.
+        if current.recordedBy:sub(-1) == "-" then current.recordedBy = RecordedBy() end
         EnsureDB()
         rec = { id = current.id }
         current.record = rec
