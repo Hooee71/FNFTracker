@@ -30,7 +30,23 @@ Check(Stats.ByTag(ms).Single().Label=="bad opener", "tags normalized");
 var toughDps = Stats.ToughestSpec(ms, healers: false);
 Check(toughDps?.Label=="Arms Warrior" && toughDps.Record=="4-2", "toughest DPS " + toughDps?.Label + " " + toughDps?.Record);
 Check(Stats.ToughestSpec(ms, healers: true)?.Label=="Restoration Druid", "toughest healer");
-Check(Stats.ToughestSpec(ms.Take(4), healers: true)==null, "toughest needs 5+ games");
+Check(Stats.ToughestSpec(ms.Take(2), healers: true)==null, "toughest needs 3+ games");
+{
+  // Toughest = most losses, not worst win rate; never a spec we haven't lost to.
+  var t = new List<Match>();
+  void G(bool won, string cls, string spec) => t.Add(new Match { PlayedAt = fri.AddMinutes(t.Count * 10), Won = won,
+    Enemies = new() { P(cls, spec), P("Priest", "Holy") } });
+  for (int i = 0; i < 4; i++) G(true, "Death Knight", "Unholy");                           // 4-0
+  G(false, "Rogue", "Assassination"); G(false, "Rogue", "Assassination"); G(true, "Rogue", "Assassination"); // 1-2
+  for (int i = 0; i < 3; i++) G(i < 2, "Warrior", "Arms");                                 // 2-1
+  for (int i = 0; i < 6; i++) G(i < 3, "Mage", "Fire");                                    // 3-3
+  var dps = Stats.ToughestSpec(t, healers: false);
+  Check(dps?.Label == "Fire Mage" && dps.Record == "3-3", $"toughest DPS = most losses (3-3 beats 1-2): {dps?.Label} {dps?.Record}");
+  var undefeated = t.Where(m => m.Enemies[0].Class == "Death Knight").ToList();
+  Check(Stats.ToughestSpec(undefeated, healers: false) == null, "spec we've never lost to is never toughest");
+  Check(Stats.ToughestSpec(t.Take(7), healers: false)?.Label == "Assassination Rogue", "3 games with losses qualifies");
+  Check(Stats.ToughestSpec(t, healers: true)?.Label == "Holy Priest", "toughest healer");
+}
 foreach (var (t, exp) in new[]{("4:32",272),("4m32s",272),("6",360),("272",272),("4.5",270),("5m",300)})
   Check(Stats.ParseDuration(t)==exp, $"duration '{t}' -> {Stats.ParseDuration(t)}");
 Check(Stats.FormatDuration(272)=="4:32", "format duration");

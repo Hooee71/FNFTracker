@@ -673,13 +673,13 @@ public partial class MainWindow : Window
         if (row is null)
         {
             AddCard(title, "-", Theme.Neutral,
-                    tooltip: $"Shows once you've played {Stats.ToughestMinGames}+ games against a spec.");
+                    tooltip: $"Shows the spec you've lost to most, once you've played it {Stats.ToughestMinGames}+ times and lost at least once.");
             return;
         }
         var brush = row.WinRate > 0.5 ? Theme.Win : row.WinRate < 0.5 ? Theme.Loss : Theme.Neutral;
         AddCard(title, $"{row.Label} ({row.WinPct})", brush,
                 tooltip: $"{row.Record} against {row.Label} over {row.Games} game(s). " +
-                         $"Specs need {Stats.ToughestMinGames}+ games to count.");
+                         $"The spec you've lost to most (specs need {Stats.ToughestMinGames}+ games to count).");
     }
 
     private void AddCard(string title, string value, Brush valueBrush,

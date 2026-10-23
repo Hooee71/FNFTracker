@@ -125,12 +125,13 @@ public static class Stats
                                           .Select(s => (s, m.Won))));
 
     /// <summary>Games needed against a spec before it can be called the toughest.</summary>
-    public const int ToughestMinGames = 5;
+    public const int ToughestMinGames = 3;
 
     /// <summary>
-    /// The enemy healer (healers: true) or DPS spec we have the worst win rate against, among
-    /// specs we've played at least <see cref="ToughestMinGames"/> games against. Ties go to the
-    /// spec we've lost to more. Null when nothing has enough games yet.
+    /// The enemy healer (healers: true) or DPS spec (class + spec) we keep losing to: the most
+    /// losses among specs we've played at least <see cref="ToughestMinGames"/> games against.
+    /// Ties go to the worse win rate. A spec we've never lost to is never the toughest.
+    /// Null when nothing qualifies yet.
     /// </summary>
     public static StatRow? ToughestSpec(IEnumerable<Match> ms, bool healers) =>
         Group(ms.SelectMany(m => m.Enemies.Where(e => !e.IsEmpty && !string.IsNullOrWhiteSpace(e.Spec)
@@ -138,9 +139,10 @@ public static class Stats
                                           .Select(e => e.Label)
                                           .Distinct(StringComparer.OrdinalIgnoreCase)
                                           .Select(s => (s, m.Won))))
-            .Where(r => r.Games >= ToughestMinGames)
-            .OrderBy(r => r.WinRate)
-            .ThenByDescending(r => r.Losses)
+            .Where(r => r.Games >= ToughestMinGames && r.Losses > 0)
+            .OrderByDescending(r => r.Losses)
+            .ThenBy(r => r.WinRate)
+            .ThenBy(r => r.Label, StringComparer.Ordinal)
             .FirstOrDefault();
 
     public static List<StatRow> ByCompType(IEnumerable<Match> ms) =>
