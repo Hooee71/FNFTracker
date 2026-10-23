@@ -17,7 +17,7 @@ match ends so the final copy has the real numbers. The app does all the math.
 ]]
 
 local ADDON_NAME = ...
-local VERSION = "0.1.3"
+local VERSION = "0.1.4"
 local ICON = "|TInterface\\AddOns\\FNFTracker\\Icon:0|t"
 local TWO_V_TWO_BRACKET = 1 -- GetPersonalRatedInfo bracket index for 2v2
 
@@ -175,6 +175,28 @@ local function IsMe(scoreName)
     return scoreName == me or scoreName:sub(1, #me + 1) == me .. "-"
 end
 
+-- Team MMR for each side (faction 0 and 1), the same numbers the end-of-match
+-- screen shows as "Your/Enemy team's average rating". The per-player
+-- prematchMMR on the scoreboard is 0 in 2v2, so this is where MMR lives.
+-- A value read earlier is kept if a later read comes back secret or empty.
+-- The > 0 checks only ever see Clean()ed values, never a secret one.
+local function CaptureTeamMmr(rec)
+    rec.teams = rec.teams or {}
+    for faction = 0, 1 do
+        local info = Try(C_PvP.GetTeamInfo, faction)
+        if info then
+            local t = rec.teams[faction + 1] or { faction = faction }
+            local mmr = Clean(info.ratingMMR)
+            local rating = Clean(info.rating)
+            local ratingNew = Clean(info.ratingNew)
+            if mmr and mmr > 0 then t.mmr = mmr end
+            if rating and rating > 0 then t.rating = rating end
+            if ratingNew and ratingNew > 0 then t.ratingNew = ratingNew end
+            rec.teams[faction + 1] = t
+        end
+    end
+end
+
 -- Reads the full scoreboard into the record. Safe to call repeatedly; each call
 -- replaces the previous read so the last (most complete) one wins.
 local function CaptureScoreboard()
@@ -244,6 +266,7 @@ local function CaptureScoreboard()
     rec.players = players
     rec.prep = current.prep
     rec.team = current.team
+    CaptureTeamMmr(rec)
     rec.hiddenFields = hidden > 0 and hidden or nil
     lastRecord = rec
 

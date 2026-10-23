@@ -29,6 +29,23 @@ public sealed class DataStore
     public void Load()
     {
         Data = File.Exists(FilePath) ? ReadFile(FilePath) : new FnfData();
+        ClearZeroMmr(Data);
+    }
+
+    /// <summary>
+    /// Addon versions before 0.1.4 saved MMR as 0 (the scoreboard doesn't fill it in for 2v2).
+    /// 0 is never a real MMR, so treat it as "not recorded" rather than letting it show up
+    /// in the table or drag down the lowest/average opponent MMR.
+    /// </summary>
+    public static bool ClearZeroMmr(FnfData data)
+    {
+        bool changed = false;
+        foreach (var m in data.Matches)
+        {
+            if (m.OurMmr is <= 0) { m.OurMmr = null; changed = true; }
+            if (m.EnemyMmr is <= 0) { m.EnemyMmr = null; changed = true; }
+        }
+        return changed;
     }
 
     /// <summary>
