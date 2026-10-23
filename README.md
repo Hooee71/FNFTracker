@@ -81,8 +81,8 @@ spec and your partner's (inspect data) as a backup if the scoreboard hides one.
 
 If you leave **+/-** blank but fill in **Rating after**, the app works out the change from your last rated game.
 
-**Stats tab:** record, streaks, rating line, and win rate broken down by enemy comp, class, spec,
-comp type (double DPS vs. healer), map, game number in the night, game length, day of week, night, tag,
+**Stats tab:** record, streaks, rating line, and win rate broken down by enemy comp (with your
+damage and healing vs. theirs), enemy healer and DPS spec, comp type (double DPS vs. healer), map, game number in the night, game length, day of week, night, tag,
 and opponents you've played more than once. Green means 60%+, red means 40% or less; anything under 3 games is grey.
 Use **Show** to pick which games count: All time, This season, a Single night (◀ ▶ jump between
 nights you played), Last 7 days, Last 30 days, or a Custom range. Set the season start in Settings.

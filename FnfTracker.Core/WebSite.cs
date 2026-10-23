@@ -329,10 +329,9 @@ public static class WebSite
         sb.Append("<div class=\"tables\">\n");
         sb.Append(MmrTable(Stats.OpponentMmrSummary(ms)));
         sb.Append(OutputTable("Damage & healing vs. them", "Result", Stats.OutputByResult(ms)));
-        sb.Append(OutputTable("Damage & healing by enemy comp", "Comp", Stats.OutputByEnemyComp(ms)));
-        sb.Append(Table("Enemy comps", "Comp", Stats.ByEnemyComp(ms)));
-        sb.Append(Table("Enemy classes (once per game)", "Class", Stats.ByEnemyClass(ms)));
-        sb.Append(Table("Enemy specs", "Spec", Stats.ByEnemySpec(ms)));
+        sb.Append(CompTable("Enemy comps", Stats.ByEnemyCompWithOutput(ms)));
+        sb.Append(Table("Enemy healers", "Spec", Stats.ByEnemySpec(ms, healers: true)));
+        sb.Append(Table("Enemy DPS", "Spec", Stats.ByEnemySpec(ms, healers: false)));
         sb.Append(Table("Comp type", "Type", Stats.ByCompType(ms)));
         sb.Append(Table("Maps", "Map", Stats.ByMap(ms)));
         sb.Append(Table("Game number in the night", "Games", Stats.ByGameNumber(ms)));
@@ -375,6 +374,34 @@ public static class WebSite
         foreach (var r in rows)
             sb.Append($"<tr><td>{H(r.Label)}</td><td class=\"r\">{r.Games}</td><td class=\"r\" data-sort=\"{r.Games}\">{r.Record}</td>" +
                       $"<td class=\"r pct {RateClass(r.Games, r.WinRate)}\" data-sort=\"{Num(r.WinRate)}\">{(r.Games == 0 ? "-" : Pct(r.WinRate))}</td></tr>");
+        sb.Append(TableEnd);
+        return sb.ToString();
+    }
+
+    /// <summary>Enemy comps: record and win %, plus our DPS/HPS vs. them from addon games.</summary>
+    private static string CompTable(string title, List<(StatRow Row, OutputGap? Output)> rows)
+    {
+        if (rows.Count == 0) return Empty(title, "Nothing yet.");
+        var sb = new StringBuilder(TableStart(title,
+            "DPS / HPS: your team's total damage and healing vs. the enemy team's, from games recorded by the addon. " +
+            "-20% DPS = 20% less damage than them. Healing only counts games where both teams brought the same number of healers."));
+        sb.Append("<thead><tr><th>Comp</th><th data-type=\"num\" class=\"r\">Games</th><th data-type=\"num\" class=\"r\">W-L</th><th data-type=\"num\" class=\"r\">Win %</th>" +
+                  "<th data-type=\"num\" class=\"r\">DPS</th><th data-type=\"num\" class=\"r\">HPS</th></tr></thead><tbody>");
+        foreach (var (r, g) in rows)
+        {
+            var dps = Stats.FormatPercentVs(g?.DpsPct);
+            var hps = Stats.FormatPercentVs(g?.HpsPct);
+            int dpsGames = g?.DpsGames ?? 0, hpsGames = g?.HpsGames ?? 0;
+            var dpsTip = dpsGames == 0 ? " title=\"No addon-recorded games against this comp yet.\""
+                : dpsGames < r.Games ? $" title=\"From the {dpsGames} of {r.Games} games recorded by the addon.\"" : "";
+            var hpsTip = dpsGames == 0 ? " title=\"No addon-recorded games against this comp yet.\""
+                : hpsGames == 0 ? " title=\"No like-for-like games: every game had a different number of healers on each side.\""
+                : hpsGames < r.Games ? $" title=\"From {hpsGames} of {r.Games} games: addon-recorded, with the same number of healers on each side.\"" : "";
+            sb.Append($"<tr><td>{H(r.Label)}</td><td class=\"r\">{r.Games}</td><td class=\"r\" data-sort=\"{r.Games}\">{r.Record}</td>" +
+                      $"<td class=\"r pct {RateClass(r.Games, r.WinRate)}\" data-sort=\"{Num(r.WinRate)}\">{(r.Games == 0 ? "-" : Pct(r.WinRate))}</td>" +
+                      $"<td class=\"r pct {GapClass(dps)}\" data-sort=\"{(g?.DpsPct is double d ? Num(d) : "")}\"{dpsTip}>{(dps.Length == 0 ? "—" : dps)}</td>" +
+                      $"<td class=\"r pct {GapClass(hps)}\" data-sort=\"{(g?.HpsPct is double h ? Num(h) : "")}\"{hpsTip}>{(hps.Length == 0 ? "—" : hps)}</td></tr>");
+        }
         sb.Append(TableEnd);
         return sb.ToString();
     }

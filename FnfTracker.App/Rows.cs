@@ -134,10 +134,10 @@ public sealed class OutputGapView
 /// <summary>One line in a simple value table (e.g. MMR: Highest / Average / Lowest).</summary>
 public sealed record InfoLine(string Label, string Value, string Note, Brush NoteBrush);
 
-/// <summary>One line in a Stats table.</summary>
+/// <summary>One line in a Stats table, optionally with our damage/healing vs. them.</summary>
 public sealed class StatView
 {
-    public StatView(StatRow row)
+    public StatView(StatRow row, OutputGap? output = null)
     {
         Label = row.Label;
         Games = row.Games;
@@ -145,6 +145,20 @@ public sealed class StatView
         WinRate = row.WinRate;
         WinPct = row.WinPct;
         Brush = Theme.ForWinRate(row.Games, row.WinRate);
+
+        DpsPct = output?.DpsPct;
+        HpsPct = output?.HpsPct;
+        var dps = OutputLine.Make("DPS", DpsPct);
+        var hps = OutputLine.Make("HPS", HpsPct);
+        Dps = dps.Text; DpsBrush = dps.Brush;
+        Hps = hps.Text; HpsBrush = hps.Brush;
+        int dpsGames = output?.DpsGames ?? 0, hpsGames = output?.HpsGames ?? 0;
+        DpsTip = dpsGames == 0 ? "No addon-recorded games against this comp yet."
+               : dpsGames < Games ? $"From the {dpsGames} of {Games} games recorded by the addon." : null;
+        HpsTip = dpsGames == 0 ? "No addon-recorded games against this comp yet."
+               : hpsGames == 0 ? "No like-for-like games: every game had a different number of healers on each side."
+               : hpsGames < Games ? $"From {hpsGames} of {Games} games: addon-recorded, with the same number of healers on each side."
+               : null;
     }
 
     public string Label { get; }
@@ -153,4 +167,13 @@ public sealed class StatView
     public double WinRate { get; }
     public string WinPct { get; }
     public Brush Brush { get; }
+
+    public double? DpsPct { get; }
+    public double? HpsPct { get; }
+    public string Dps { get; }
+    public Brush DpsBrush { get; }
+    public string Hps { get; }
+    public Brush HpsBrush { get; }
+    public string? DpsTip { get; }
+    public string? HpsTip { get; }
 }

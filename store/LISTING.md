@@ -36,7 +36,7 @@ FNF Arena Tracker is a fan-made app and is not affiliated with or endorsed by Bl
 ## Features (one per line)
 
 Automatic game recording with a one-click companion addon
-Win rate by enemy comp, class, spec and map
+Win rate by enemy comp, healer and DPS spec, and map
 Rating history and results by MMR gap
 Notes, tags and per-game editing
 Optional public stats website on GitHub Pages

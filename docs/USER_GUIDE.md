@@ -148,12 +148,16 @@ The app remembers your choice.
 - **MMR:** the highest, average and lowest enemy team MMR you've faced, and whether you won those
   games. This needs addon-recorded games.
 - **Damage & healing vs. them** (addon games only): your team's total damage and healing compared
-  with the enemy team's, first for all games, wins and losses, then for each enemy comp (worst damage
-  gap first). `-20%` DPS means you did 20% less damage than them. Each figure comes from the summed
-  totals over those games. Healing only counts games where both teams brought the same number of
-  healers; hover an HPS figure to see how many games it's built from.
+  with the enemy team's, for all games, wins and losses. `-20%` DPS means you did 20% less damage
+  than them. Each figure comes from the summed totals over those games. Healing only counts games
+  where both teams brought the same number of healers; hover an HPS figure to see how many games
+  it's built from.
+- **Enemy comps:** your record and win % against each comp, plus the same DPS / HPS comparison for
+  the addon-recorded games against it.
+- **Enemy healers** and **Enemy DPS:** your record against each class + spec, healers and DPS in
+  separate tables.
 - **Win-rate tables**, broken down by:
-  enemy comp, enemy class, enemy spec, comp type (double DPS vs. with a healer), map, game number in
+  comp type (double DPS vs. with a healer), map, game number in
   the night, game length, day of week, night, tag, and repeat opponents (players you've met more
   than once). When there's enough data you'll also see enemy MMR vs. yours, and our comps if we've
   played more than one.
