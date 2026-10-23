@@ -338,9 +338,7 @@ public static class WebSite
         sb.Append(Table("Game length", "Length", Stats.ByDuration(ms)));
         sb.Append(Table("Dampening at the end", "Dampening", Stats.ByDampening(ms),
             "Nothing yet. Dampening is read by the FNF addon (0.1.6 or newer) at the end of each game."));
-        sb.Append(CountTable("Jerk Factor", "Enemy team", Stats.JerkFactor(ms),
-            $"Rating gap between the two enemies (their personal ratings, not MMR). {Stats.CarryGap}+ apart: " +
-            $"\"{Stats.CarryLabel}\". Under {Stats.CarryGap}: \"{Stats.NormalLabel}\".",
+        sb.Append(CountTable("Jerk Factor", "Enemy team", Stats.JerkFactor(ms), Stats.JerkFactorRule,
             "Nothing yet. Needs both enemies' ratings, which come from games recorded by the FNF addon."));
         sb.Append(Table("Nights", "Night", Stats.ByNight(ms)));
         sb.Append(Table("Tags", "Tag", Stats.ByTag(ms)));

@@ -156,9 +156,10 @@ The app remembers your choice.
   the addon-recorded games against it.
 - **Enemy healers** and **Enemy DPS:** your record against each class + spec, healers and DPS in
   separate tables.
-- **Jerk Factor:** how many games the enemy pair's personal ratings (not MMR) were 500 or more
-  apart, *Clearly selling wins for gold*, vs. under 500, *Most likely actual friends*. Needs both
-  enemies' ratings, so addon-recorded games only.
+- **Jerk Factor:** how many games fell in each tier of the gap between the enemy pair's personal
+  ratings (not MMR): 500+ apart, *Clearly buying wins for gold*; 201-499, *Questionable
+  association*; 0-200, *Most likely friends or guildmates*. Needs both enemies' ratings, so
+  addon-recorded games only.
 - **Win-rate tables**, broken down by:
   comp type (double DPS vs. with a healer), map, game number in
   the night, game length, Dampening at the end (addon 0.1.6+ games), night, tag, and repeat opponents (players you've met more

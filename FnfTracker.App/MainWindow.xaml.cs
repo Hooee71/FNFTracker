@@ -915,9 +915,9 @@ public partial class MainWindow : Window
         AddStatBlock(panel, rows.Count);
     }
 
+    // One line per tier: WPF tooltips don't wrap.
     private static readonly string JerkFactorTip =
-        $"Rating gap between the two enemies (their personal ratings, not MMR).\n" +
-        $"{Stats.CarryGap}+ apart: \"{Stats.CarryLabel}\". Under {Stats.CarryGap}: \"{Stats.NormalLabel}\".";
+        Stats.JerkFactorRule.Replace("MMR). ", "MMR).\n").Replace("\". ", "\".\n");
 
     /// <summary>A label + game count table (no win rate), e.g. the Jerk Factor tally.</summary>
     private void AddCountTable(string title, string labelHeader, List<StatRow> rows, string tip, string emptyText)
