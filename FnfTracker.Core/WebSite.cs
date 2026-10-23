@@ -354,7 +354,7 @@ public static class WebSite
 
     private static string ToughestCard(string title, StatRow? row) =>
         row is null
-            ? Card(title, "-", "", $"Shows once you've played {Stats.ToughestMinGames}+ games against a spec.")
+            ? Card(title, "-", "", $"Shows the spec you've lost to most, once you've played it {Stats.ToughestMinGames}+ times and lost at least once.")
             : Card(title, $"{row.Label} ({Pct(row.WinRate)})",
                    row.WinRate > 0.5 ? "win" : row.WinRate < 0.5 ? "loss" : "",
                    $"{row.Record} against {row.Label} over {row.Games} game(s).");
