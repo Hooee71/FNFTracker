@@ -69,6 +69,7 @@ public sealed class MatchRow
             var tip = $"Damage   us {Side(Stats.OurDamage(Match))}  ·  them {Side(Stats.TheirDamage(Match))}\n" +
                       $"Healing  us {Side(Stats.OurHealing(Match))}  ·  them {Side(Stats.TheirHealing(Match))}";
             if (secs > 0) tip += $"\nLength   {Duration}";
+            if (Match.DampeningPct is int damp) tip += $"\nDampening at the end   {damp}%";
             if (!Stats.HealingComparable(Match))
                 tip += "\n\nHealing is greyed out: the teams brought a different number of healers, so it isn't a like-for-like comparison.";
             return tip;

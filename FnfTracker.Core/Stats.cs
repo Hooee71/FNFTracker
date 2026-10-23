@@ -223,6 +223,25 @@ public static class Stats
                  .ToList();
     }
 
+    /// <summary>Win rate by Dampening when the match ended (games the addon read it for).</summary>
+    public static List<StatRow> ByDampening(IEnumerable<Match> ms)
+    {
+        var order = new[] { "Under 40%", "40-59%", "60-79%", "80%+" };
+        string Bucket(int d) => d switch
+        {
+            < 40 => order[0],
+            < 60 => order[1],
+            < 80 => order[2],
+            _ => order[3],
+        };
+        return ms.Where(m => m.DampeningPct.HasValue)
+                 .Select(m => (Bucket(m.DampeningPct!.Value), m.Won))
+                 .GroupBy(r => r.Item1)
+                 .Select(g => new StatRow(g.Key, g.Count(), g.Count(r => r.Won)))
+                 .OrderBy(r => Array.IndexOf(order, r.Label))
+                 .ToList();
+    }
+
     public static List<StatRow> ByTag(IEnumerable<Match> ms) =>
         Group(ms.SelectMany(m => m.Tags.Where(t => !string.IsNullOrWhiteSpace(t))
                                        .Select(t => t.Trim().ToLowerInvariant())

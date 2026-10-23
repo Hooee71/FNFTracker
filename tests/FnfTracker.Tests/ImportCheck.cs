@@ -46,6 +46,11 @@ public static class ImportCheck {
       players0 + extra + " } } }")[0];
     var withTeams = AddonImport.ToMatch(Rec(", [\"teams\"] = { { [\"faction\"] = 0, [\"mmr\"] = 1955 }, { [\"faction\"] = 1, [\"mmr\"] = 1748 } }"), out _)!;
     Check(withTeams.OurMmr == 1955 && withTeams.EnemyMmr == 1748, $"team mmr from GetTeamInfo: ours {withTeams.OurMmr}, theirs {withTeams.EnemyMmr}");
+    var damp = AddonImport.ToMatch(Rec(", [\"dampening\"] = 54"), out _)!;
+    Check(damp.DampeningPct == 54 && withTeams.DampeningPct == null, $"dampening imported when the addon read it: {damp.DampeningPct}");
+    var dampMs = new List<Match> { new() { Won = true, DampeningPct = 32 }, new() { Won = false, DampeningPct = 66 }, new() { Won = false, DampeningPct = 71 }, new() { Won = true } };
+    var byDamp = Stats.ByDampening(dampMs);
+    Check(byDamp.Select(r => $"{r.Label} {r.Record}").SequenceEqual(new[] { "Under 40% 1-0", "60-79% 0-2" }), "dampening buckets: " + string.Join(", ", byDamp.Select(r => $"{r.Label} {r.Record}")));
     var oldAddon = AddonImport.ToMatch(Rec(""), out _)!;
     Check(oldAddon.OurMmr == null && oldAddon.EnemyMmr == null, $"0 mmr from old addon is not recorded: ours {oldAddon.OurMmr}, theirs {oldAddon.EnemyMmr}");
     var zeroData = new FnfData(); zeroData.Matches.Add(new Match { OurMmr = 0, EnemyMmr = 0 }); zeroData.Matches.Add(new Match { EnemyMmr = 1800 });

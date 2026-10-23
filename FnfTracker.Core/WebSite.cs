@@ -336,6 +336,8 @@ public static class WebSite
         sb.Append(Table("Maps", "Map", Stats.ByMap(ms)));
         sb.Append(Table("Game number in the night", "Games", Stats.ByGameNumber(ms)));
         sb.Append(Table("Game length", "Length", Stats.ByDuration(ms)));
+        sb.Append(Table("Dampening at the end", "Dampening", Stats.ByDampening(ms),
+            "Nothing yet. Dampening is read by the FNF addon (0.1.6 or newer) at the end of each game."));
         sb.Append(Table("Day of week", "Day", Stats.ByWeekday(ms)));
         sb.Append(Table("Nights", "Night", Stats.ByNight(ms)));
         sb.Append(Table("Tags", "Tag", Stats.ByTag(ms)));
@@ -366,9 +368,9 @@ public static class WebSite
     private static string Empty(string title, string text) =>
         $"<section class=\"stat\"><h3>{H(title)}</h3><p class=\"empty\">{H(text)}</p></section>\n";
 
-    private static string Table(string title, string labelHeader, List<StatRow> rows)
+    private static string Table(string title, string labelHeader, List<StatRow> rows, string emptyText = "Nothing yet.")
     {
-        if (rows.Count == 0) return Empty(title, "Nothing yet.");
+        if (rows.Count == 0) return Empty(title, emptyText);
         var sb = new StringBuilder(TableStart(title));
         sb.Append($"<thead><tr><th>{H(labelHeader)}</th><th data-type=\"num\" class=\"r\">Games</th><th data-type=\"num\" class=\"r\">W-L</th><th data-type=\"num\" class=\"r\">Win %</th></tr></thead><tbody>");
         foreach (var r in rows)

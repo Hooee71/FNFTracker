@@ -231,6 +231,7 @@ public static class AddonImport
             OurTeam = ours.Select(p => Slot(p, enemy: false)).ToList(),
             Enemies = theirs.Select(p => Slot(p, enemy: true)).ToList(),
             DurationSeconds = duration,
+            DampeningPct = Positive(rec.Int("dampening")),
             RatingChange = rated ? me?.Int("ratingChange") : null,
             RatingAfter = rated ? rec.Int("ratingAfter2v2") : null,
             // Team MMR (addon 0.1.4+) is what the end-of-match screen shows. The scoreboard's

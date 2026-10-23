@@ -44,6 +44,9 @@ public sealed class Match
 
     public int? DurationSeconds { get; set; }
 
+    /// <summary>Dampening (%) on us when the match ended, as read by the addon (0.1.6+).</summary>
+    public int? DampeningPct { get; set; }
+
     /// <summary>Team matchmaking ratings from the scoreboard (addon imports only).</summary>
     public int? OurMmr { get; set; }
     public int? EnemyMmr { get; set; }
