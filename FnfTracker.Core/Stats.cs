@@ -111,15 +111,25 @@ public static class Stats
     public static List<StatRow> ByEnemyComp(IEnumerable<Match> ms) =>
         Group(ms.Select(m => (m.EnemyCompKey, m.Won)));
 
-    /// <summary>A game counts once per distinct enemy class in it (a mirror counts once).</summary>
-    public static List<StatRow> ByEnemyClass(IEnumerable<Match> ms) =>
-        Group(ms.SelectMany(m => m.Enemies.Where(e => !e.IsEmpty)
-                                          .Select(e => e.Class)
-                                          .Distinct(StringComparer.OrdinalIgnoreCase)
-                                          .Select(c => (c, m.Won))));
+    /// <summary>
+    /// Each enemy comp's record, plus our damage/healing vs. them over the addon games
+    /// against it (null when no game against that comp has scoreboard numbers).
+    /// </summary>
+    public static List<(StatRow Row, OutputGap? Output)> ByEnemyCompWithOutput(IEnumerable<Match> ms)
+    {
+        var list = ms.ToList();
+        var output = OutputByEnemyComp(list).ToDictionary(o => o.Label, StringComparer.OrdinalIgnoreCase);
+        return ByEnemyComp(list).Select(r => (r, output.GetValueOrDefault(r.Label))).ToList();
+    }
 
-    public static List<StatRow> ByEnemySpec(IEnumerable<Match> ms) =>
-        Group(ms.SelectMany(m => m.Enemies.Where(e => !e.IsEmpty)
+    /// <summary>
+    /// Record against each enemy class + spec; a game counts once per distinct spec in it.
+    /// healers: true = healer specs only, false = DPS specs only, null = all. A spec-less
+    /// enemy (hand-entered class only) can't be sorted into either, so it only shows in "all".
+    /// </summary>
+    public static List<StatRow> ByEnemySpec(IEnumerable<Match> ms, bool? healers = null) =>
+        Group(ms.SelectMany(m => m.Enemies.Where(e => !e.IsEmpty
+                                                      && (healers is null || (!string.IsNullOrWhiteSpace(e.Spec) && GameData.IsHealer(e) == healers)))
                                           .Select(e => e.Label)
                                           .Distinct(StringComparer.OrdinalIgnoreCase)
                                           .Select(s => (s, m.Won))));

@@ -81,6 +81,31 @@ Check(Stats.FormatDuration(272)=="4:32", "format duration");
   var byComp = Stats.OutputByEnemyComp(new[] { g1, g2, g3 });
   Check(byComp.Count == 2 && byComp[0].Label == "Arms Warrior + Frost Mage" && byComp[0].DpsPct == -50, "comp table, worst gap first");
   Check(Stats.OutputByResult(new[] { g3 }).Count == 0, "no addon games -> empty");
+
+  // Enemy comps table carries DPS/HPS; the record counts every game, the output only addon games.
+  var g4 = new Match { Won = true, OurTeam = us, Enemies = new() { P("Mage","Fire"), P("Rogue","Subtlety") } };   // hand-entered only
+  var withOut = Stats.ByEnemyCompWithOutput(new[] { g1, g2, g3, g4 });
+  var ddRow = withOut.Single(r => r.Row.Label == "Arms Warrior + Frost Mage");
+  Check(ddRow.Row.Games == 2 && ddRow.Row.Record == "1-1" && ddRow.Output?.DpsGames == 1 && ddRow.Output.DpsPct == -50,
+        $"comp row: record from all games, DPS from addon games ({ddRow.Row.Record}, {ddRow.Output?.DpsGames}, {ddRow.Output?.DpsPct})");
+  Check(withOut.Single(r => r.Row.Label.Contains("Fire Mage")).Output == null, "comp with no addon games has no DPS/HPS");
+  Check(withOut.Count == 3, "every comp listed once");
+}
+{
+  // Enemy specs split into healers and DPS.
+  var sm = new List<Match> {
+    new() { Won = true,  Enemies = new() { P("Priest","Discipline"), P("Death Knight","Unholy") } },
+    new() { Won = false, Enemies = new() { P("Priest","Holy"), P("Death Knight","Unholy") } },
+    new() { Won = false, Enemies = new() { P("Rogue","Assassination"), P("Rogue","Assassination") } },   // mirror counts once
+    new() { Won = true,  Enemies = new() { P("Paladin","Holy"), P("Warrior","") } },                    // spec-less warrior
+  };
+  var healersT = Stats.ByEnemySpec(sm, healers: true);
+  var dpsT = Stats.ByEnemySpec(sm, healers: false);
+  Check(healersT.Select(r => r.Label).OrderBy(x => x, StringComparer.Ordinal).SequenceEqual(new[] { "Discipline Priest", "Holy Paladin", "Holy Priest" }),
+        "healer table: " + string.Join(", ", healersT.Select(r => r.Label)));
+  Check(dpsT.Select(r => $"{r.Label} {r.Record}").OrderBy(x => x, StringComparer.Ordinal).SequenceEqual(new[] { "Assassination Rogue 0-1", "Unholy Death Knight 1-1" }),
+        "DPS table: " + string.Join(", ", dpsT.Select(r => $"{r.Label} {r.Record}")));
+  Check(Stats.ByEnemySpec(sm).Count == 6, "unsplit still lists everything (incl. spec-less)");
 }
 // store round trip + merge dedupe
 var path = Path.Combine(Path.GetTempPath(), "fnf-test-" + Guid.NewGuid() + ".json");

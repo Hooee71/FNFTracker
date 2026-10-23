@@ -646,10 +646,9 @@ public partial class MainWindow : Window
 
         StatTables.Children.Clear();
         AddOutputTable("Damage & healing vs. them", "Result", Stats.OutputByResult(ms));
-        AddOutputTable("Damage & healing by enemy comp", "Comp", Stats.OutputByEnemyComp(ms));
-        AddTable("Enemy comps", "Comp", Stats.ByEnemyComp(ms));
-        AddTable("Enemy classes (once per game)", "Class", Stats.ByEnemyClass(ms));
-        AddTable("Enemy specs", "Spec", Stats.ByEnemySpec(ms));
+        AddTable("Enemy comps", "Comp", Stats.ByEnemyCompWithOutput(ms));
+        AddTable("Enemy healers", "Spec", Stats.ByEnemySpec(ms, healers: true));
+        AddTable("Enemy DPS", "Spec", Stats.ByEnemySpec(ms, healers: false));
         AddTable("Comp type", "Type", Stats.ByCompType(ms));
         AddTable("Maps", "Map", Stats.ByMap(ms));
         AddTable("Game number in the night", "Games", Stats.ByGameNumber(ms));
@@ -893,7 +892,14 @@ public partial class MainWindow : Window
         StatTables.Children.Add(panel);
     }
 
-    private void AddTable(string title, string labelHeader, List<StatRow> rows)
+    private void AddTable(string title, string labelHeader, List<StatRow> rows) =>
+        AddTable(title, labelHeader, rows.Select(r => new StatView(r)).ToList(), withOutput: false);
+
+    /// <summary>A stats table with our DPS/HPS vs. them alongside the record (enemy comps).</summary>
+    private void AddTable(string title, string labelHeader, List<(StatRow Row, OutputGap? Output)> rows) =>
+        AddTable(title, labelHeader, rows.Select(r => new StatView(r.Row, r.Output)).ToList(), withOutput: true);
+
+    private void AddTable(string title, string labelHeader, List<StatView> rows, bool withOutput)
     {
         var panel = new StackPanel { Margin = new Thickness(0, 0, 16, 16) };
         var heading = new TextBlock { Text = title, FontSize = 17, Margin = new Thickness(0, 6, 0, 6) };
@@ -916,7 +922,7 @@ public partial class MainWindow : Window
             SelectionMode = DataGridSelectionMode.Single,
             CanUserResizeRows = false,
             MaxHeight = 300,
-            ItemsSource = rows.Select(r => new StatView(r)).ToList(),
+            ItemsSource = rows,
         };
         grid.Columns.Add(new DataGridTextColumn
         {
@@ -946,6 +952,39 @@ public partial class MainWindow : Window
             Width = DataGridLength.Auto,
             MinWidth = 64,
         });
+
+        if (withOutput)
+        {
+            grid.ToolTip = "DPS / HPS: your team's total damage and healing vs. the enemy team's, from games\n" +
+                           "recorded by the addon. -20% DPS = you did 20% less damage than them. Healing only\n" +
+                           "counts games where both teams brought the same number of healers.";
+            Style Colored(string brushPath, string tipPath)
+            {
+                var st = new Style(typeof(TextBlock));
+                st.Setters.Add(new Setter(TextBlock.ForegroundProperty, new Binding(brushPath)));
+                st.Setters.Add(new Setter(TextBlock.FontWeightProperty, FontWeights.SemiBold));
+                st.Setters.Add(new Setter(FrameworkElement.ToolTipProperty, new Binding(tipPath)));
+                return st;
+            }
+            grid.Columns.Add(new DataGridTextColumn
+            {
+                Header = "DPS",
+                Binding = new Binding(nameof(StatView.Dps)),
+                SortMemberPath = nameof(StatView.DpsPct),
+                ElementStyle = Colored(nameof(StatView.DpsBrush), nameof(StatView.DpsTip)),
+                Width = DataGridLength.Auto,
+                MinWidth = 64,
+            });
+            grid.Columns.Add(new DataGridTextColumn
+            {
+                Header = "HPS",
+                Binding = new Binding(nameof(StatView.Hps)),
+                SortMemberPath = nameof(StatView.HpsPct),
+                ElementStyle = Colored(nameof(StatView.HpsBrush), nameof(StatView.HpsTip)),
+                Width = DataGridLength.Auto,
+                MinWidth = 64,
+            });
+        }
 
         // Short tables pass the mouse wheel up to the page; tall ones (at MaxHeight) scroll themselves.
         grid.PreviewMouseWheel += (_, e) =>
