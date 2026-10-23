@@ -289,7 +289,18 @@
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
-                                <DataGridTextColumn Header="Map" Binding="{Binding Map}" Width="*" MinWidth="185" ElementStyle="{StaticResource CellText}" />
+                                <!-- Map, with Dampening at the end on a second, dimmer line (addon games that read it). -->
+                                <DataGridTemplateColumn Header="Map" SortMemberPath="Map" Width="*" MinWidth="185">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <StackPanel VerticalAlignment="Center" Margin="0,4">
+                                                <TextBlock Text="{Binding Map}" />
+                                                <TextBlock Text="{Binding Dampening}" Opacity="0.55" FontSize="12" Margin="0,1,0,0"
+                                                           Visibility="{Binding DampeningVisibility}" />
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
                                 <DataGridTextColumn Header="Rating" HeaderStyle="{StaticResource CenterHeader}" Binding="{Binding Rating}" Width="Auto" MinWidth="44" ElementStyle="{StaticResource CenterCellText}" />
                                 <DataGridTextColumn Header="+/-" HeaderStyle="{StaticResource CenterHeader}" Binding="{Binding Change}" Width="Auto" MinWidth="44">
                                     <DataGridTextColumn.ElementStyle>

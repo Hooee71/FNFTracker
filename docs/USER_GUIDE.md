@@ -110,14 +110,14 @@ Editing never touches the scoreboard numbers behind the DPS/HPS column.
 ### Columns
 
 **Night** and **#** (game number in that night), **Time**, **W/L**, **Enemies** (in class colours,
-with names; click a name to open that player's check-pvp.fr profile), **Map**, **Rating**, **+/-**, **Their MMR** (addon games only), **DPS/HPS** and
+with names; click a name to open that player's check-pvp.fr profile), **Map** (with Dampening at the end underneath, for addon games that read it), **Rating**, **+/-**, **Their MMR** (addon games only), **DPS/HPS** and
 **Notes**. Click a column header to sort by it.
 
 **DPS/HPS** (addon games only) compares your team's total damage and healing with the enemy team's:
 `DPS -18%` means you did 18% less damage than they did. Green when you were ahead, red when you were
 behind, with a small bar that grows right (ahead) or left (behind) from a centre tick and fills at a
 50% gap. Both teams play the same length of game, so the gap in totals is the same as the gap in DPS
-and HPS. Hover the cell for the actual totals, per-second rates, game length and Dampening at the end. Sorting the column
+and HPS. Hover the cell for the actual totals, per-second rates and game length. Sorting the column
 sorts by the damage gap. (Game length is still recorded, and editable from the pencil.)
 
 HPS turns grey when the teams brought a different number of healers: a healer comp out-heals double
