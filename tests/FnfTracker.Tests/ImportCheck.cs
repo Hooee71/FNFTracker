@@ -35,6 +35,22 @@ public static class ImportCheck {
     store.Delete(loss.Id);
     Check(AddonImport.ImportInto(store, root).Added == 0, "deleted game does not come back");
 
+    // Live 2v2 scoreboards report prematchMMR = 0 for everyone; team MMR comes from C_PvP.GetTeamInfo.
+    const string players0 = "[\"players\"] = {" +
+      "{ [\"name\"] = \"Me\", [\"class\"] = \"MONK\", [\"spec\"] = \"Mistweaver\", [\"team\"] = 0, [\"isMe\"] = true, [\"mmrBefore\"] = 0 }," +
+      "{ [\"name\"] = \"Pal\", [\"class\"] = \"PALADIN\", [\"spec\"] = \"Retribution\", [\"team\"] = 0, [\"mmrBefore\"] = 0 }," +
+      "{ [\"name\"] = \"Foe-A\", [\"class\"] = \"ROGUE\", [\"spec\"] = \"Subtlety\", [\"team\"] = 1, [\"mmrBefore\"] = 0 }," +
+      "{ [\"name\"] = \"Foe-B\", [\"class\"] = \"MAGE\", [\"spec\"] = \"Fire\", [\"team\"] = 1, [\"mmrBefore\"] = 0 } }";
+    LuaTable Rec(string extra) => AddonImport.ReadRecords(
+      "FNFTrackerDB = { [\"matches\"] = { { [\"id\"] = \"x\", [\"recordedBy\"] = \"Me-Realm\", [\"rated\"] = true, [\"myTeam\"] = 0, [\"winner\"] = 0, [\"endedAt\"] = 1792714618, " +
+      players0 + extra + " } } }")[0];
+    var withTeams = AddonImport.ToMatch(Rec(", [\"teams\"] = { { [\"faction\"] = 0, [\"mmr\"] = 1955 }, { [\"faction\"] = 1, [\"mmr\"] = 1748 } }"), out _)!;
+    Check(withTeams.OurMmr == 1955 && withTeams.EnemyMmr == 1748, $"team mmr from GetTeamInfo: ours {withTeams.OurMmr}, theirs {withTeams.EnemyMmr}");
+    var oldAddon = AddonImport.ToMatch(Rec(""), out _)!;
+    Check(oldAddon.OurMmr == null && oldAddon.EnemyMmr == null, $"0 mmr from old addon is not recorded: ours {oldAddon.OurMmr}, theirs {oldAddon.EnemyMmr}");
+    var zeroData = new FnfData(); zeroData.Matches.Add(new Match { OurMmr = 0, EnemyMmr = 0 }); zeroData.Matches.Add(new Match { EnemyMmr = 1800 });
+    Check(DataStore.ClearZeroMmr(zeroData) && zeroData.Matches[0].EnemyMmr == null && zeroData.Matches[0].OurMmr == null && zeroData.Matches[1].EnemyMmr == 1800, "saved 0 mmr cleared on load");
+
     // Parser edge cases
     var g = LuaSavedVariablesReader.Parse("X = {\n \"a\\\\b\\n\", -- [1]\n -5.5e2, -- comment\n true, [4] = false, [\"k\"] = { },\n}\nY = -inf\n");
     var x = (LuaTable)g["X"]!;

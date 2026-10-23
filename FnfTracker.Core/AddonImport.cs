@@ -218,6 +218,7 @@ public static class AddonImport
         if (duration <= 0) duration = null;
 
         bool rated = rec.Bool("rated") == true;
+        var enemyTeam = theirs[0].Int("team");
         var match = new Match
         {
             Id = StableGuid(externalId),
@@ -232,12 +233,21 @@ public static class AddonImport
             DurationSeconds = duration,
             RatingChange = rated ? me?.Int("ratingChange") : null,
             RatingAfter = rated ? rec.Int("ratingAfter2v2") : null,
-            OurMmr = rated ? (me ?? ours.FirstOrDefault())?.Int("mmrBefore") : null,
-            EnemyMmr = rated ? theirs.Select(p => p.Int("mmrBefore")).FirstOrDefault(v => v != null) : null,
+            // Team MMR (addon 0.1.4+) is what the end-of-match screen shows. The scoreboard's
+            // per-player prematchMMR is 0 in 2v2, so it's only a fallback, and 0 means "not recorded".
+            OurMmr = rated ? TeamMmr(rec, myTeam) ?? Positive((me ?? ours.FirstOrDefault())?.Int("mmrBefore")) : null,
+            EnemyMmr = rated ? TeamMmr(rec, enemyTeam) ?? theirs.Select(p => Positive(p.Int("mmrBefore"))).FirstOrDefault(v => v != null) : null,
         };
         if (!rated) match.Tags.Add("skirmish");
         return match;
     }
+
+    private static int? Positive(int? v) => v > 0 ? v : null;
+
+    /// <summary>A side's team MMR from the record's "teams" list (one entry per faction 0/1).</summary>
+    private static int? TeamMmr(LuaTable rec, int? faction) =>
+        faction is null ? null
+            : Positive(rec.Tables("teams").FirstOrDefault(t => t.Int("faction") == faction)?.Int("mmr"));
 
     /// <summary>"Buddy" and "Buddy-Area52" are the same player; the scoreboard drops your own realm.</summary>
     private static bool SameName(string? a, string? b)
