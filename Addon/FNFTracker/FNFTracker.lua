@@ -22,7 +22,6 @@ local ICON = "|TInterface\\AddOns\\FNFTracker\\Icon:0|t"
 local TWO_V_TWO_BRACKET = 1 -- GetPersonalRatedInfo bracket index for 2v2
 
 local current        -- the arena we're in right now
-local dampTicker     -- polls Dampening while we're in an arena
 local DAMPENING_SPELL = 110310
 local lastRecord     -- most recent saved record (gets post-match rating on exit)
 local wantRating     -- waiting to read 2v2 rating after leaving an arena
@@ -289,19 +288,15 @@ local function CaptureScoreboard()
     end
 end
 
--- Dampening is a debuff on every player; each stack is 1% less healing. Polled
--- through the match so the last value read before it ends is kept (the debuff
--- can drop off as the match ends, and may read as secret at times).
+-- Dampening is a debuff on every player; each stack is 1% less healing. Read
+-- once, the moment the match ends. Nothing is saved if it's already gone or
+-- still secret then.
 local function ReadDampening()
-    if not current or current.completed then return end
+    if not current then return end
     local aura = C_UnitAuras and Try(C_UnitAuras.GetPlayerAuraBySpellID, DAMPENING_SPELL)
     if not aura then return end
     local stacks = Clean(aura.applications)
     if stacks and stacks > 0 then current.dampening = stacks end
-end
-
-local function StopDampeningTicker()
-    if dampTicker then dampTicker:Cancel() dampTicker = nil end
 end
 
 local function OnMatchComplete(winner, duration)
@@ -340,9 +335,7 @@ local function OnZoneChange()
     if InArena() then
         if not current then StartMatch() end
         CaptureTeam()
-        if not dampTicker then dampTicker = C_Timer.NewTicker(5, ReadDampening) end
     elseif current then
-        StopDampeningTicker()
         -- 4 players = 2v2; the rating we read afterwards is the 2v2 bracket's.
         if current.record and current.rated and #(current.record.players or {}) == 4 then
             wantRating = true
