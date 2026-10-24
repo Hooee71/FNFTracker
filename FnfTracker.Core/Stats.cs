@@ -260,7 +260,37 @@ public static class Stats
                  .ToList();
     }
 
-    /// <summary>Win rate by Dampening when the match ended (games the addon read it for).</summary>
+    /// <summary>
+    /// Midnight 2v2 Dampening, worked out from the addon's real readings (Oct 2026): it starts at
+    /// 20% for each healer in the match and rises 1% every 10 seconds. Matched 7 of 8 readings
+    /// exactly and the 8th within 1%. Null without a length, without every spec known, or with no
+    /// healer on either side (no readings to confirm that case yet).
+    /// </summary>
+    public static int? EstimateDampening(Match m)
+    {
+        if (m.DurationSeconds is not int secs || secs <= 0) return null;
+        var all = m.OurTeam.Concat(m.Enemies).Where(p => !p.IsEmpty).ToList();
+        if (all.Count != 4 || all.Any(p => string.IsNullOrWhiteSpace(p.Spec))) return null;
+        int healers = all.Count(GameData.IsHealer);
+        if (healers == 0) return null;
+        return Math.Min(100, 20 * healers + (secs + 5) / 10);
+    }
+
+    /// <summary>Dampening at the end: the addon's reading when it got one, else the estimate.</summary>
+    public static (int Pct, bool Estimated)? Dampening(Match m) =>
+        m.DampeningPct is int d ? (d, false)
+        : EstimateDampening(m) is int e ? (e, true)
+        : null;
+
+    /// <summary>"Dampening 57%", or "Dampening ~57%" when estimated; null when unknown.</summary>
+    public static string? DampeningText(Match m) =>
+        Dampening(m) is var (pct, est) ? $"Dampening {(est ? "~" : "")}{pct}%" : null;
+
+    public const string DampeningEstimateNote =
+        "~ = estimated from game length and healers: starts at 20% per healer in the match, +1% every 10 seconds. " +
+        "Otherwise read by the FNF addon when the match ended (it usually only gets a reading on losses).";
+
+    /// <summary>Win rate by Dampening when the match ended (read by the addon, or estimated).</summary>
     public static List<StatRow> ByDampening(IEnumerable<Match> ms)
     {
         var order = new[] { "Under 40%", "40-59%", "60-79%", "80%+" };
@@ -271,8 +301,9 @@ public static class Stats
             < 80 => order[2],
             _ => order[3],
         };
-        return ms.Where(m => m.DampeningPct.HasValue)
-                 .Select(m => (Bucket(m.DampeningPct!.Value), m.Won))
+        return ms.Select(m => (D: Dampening(m), m.Won))
+                 .Where(r => r.D != null)
+                 .Select(r => (Bucket(r.D!.Value.Pct), r.Won))
                  .GroupBy(r => r.Item1)
                  .Select(g => new StatRow(g.Key, g.Count(), g.Count(r => r.Won)))
                  .OrderBy(r => Array.IndexOf(order, r.Label))

@@ -35,8 +35,9 @@ public sealed class MatchRow
     public string ResultText => Match.Won ? "W" : "L";
     public Brush ResultBrush => Match.Won ? Theme.Win : Theme.Loss;
     public string Map => Match.Map;
-    public string? Dampening => Match.DampeningPct is int d ? $"Dampening {d}%" : null;
-    public Visibility DampeningVisibility => Match.DampeningPct.HasValue ? Visibility.Visible : Visibility.Collapsed;
+    public string? Dampening => Stats.DampeningText(Match);
+    public Visibility DampeningVisibility => Dampening != null ? Visibility.Visible : Visibility.Collapsed;
+    public string? DampeningTip => Stats.Dampening(Match)?.Estimated == true ? Stats.DampeningEstimateNote : null;
     public string Enemies => Match.EnemyCompKey;
     public List<Chip> EnemyChips { get; }
     public int? Rating => Match.RatingAfter;
