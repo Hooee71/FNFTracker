@@ -225,7 +225,9 @@ public static class WebSite
             sb.Append($"<td class=\"c result {(m.Won ? "win" : "loss")}\">{(m.Won ? "W" : "L")}</td>");
             sb.Append("<td>").Append(string.Concat(enemies.Select(e => Chip(e, homeRealm, settings.Region, showName: true)))).Append("</td>");
             sb.Append("<td class=\"ours\">").Append(string.Concat(ours.Select(p => Chip(p, null, settings.Region, showName: false)))).Append("</td>");
-            sb.Append($"<td>{H(m.Map)}{(m.DampeningPct is int damp ? $"<div class=\"damp\">Dampening {damp}%</div>" : "")}{TagsHtml(m.Tags)}</td>");
+            var damp = Stats.DampeningText(m);
+            var dampTip = Stats.Dampening(m)?.Estimated == true ? $" title=\"{H(Stats.DampeningEstimateNote)}\"" : "";
+            sb.Append($"<td>{H(m.Map)}{(damp != null ? $"<div class=\"damp\"{dampTip}>{H(damp)}</div>" : "")}{TagsHtml(m.Tags)}</td>");
             sb.Append($"<td class=\"c\">{m.RatingAfter}</td>");
             sb.Append($"<td class=\"c {(m.RatingChange < 0 ? "loss" : "win")}\" data-sort=\"{m.RatingChange}\">{change}</td>");
             sb.Append($"<td class=\"c\">{m.EnemyMmr}</td>");
@@ -337,7 +339,8 @@ public static class WebSite
         sb.Append(Table("Game number in the night", "Games", Stats.ByGameNumber(ms)));
         sb.Append(Table("Game length", "Length", Stats.ByDuration(ms)));
         sb.Append(Table("Dampening at the end", "Dampening", Stats.ByDampening(ms),
-            "Nothing yet. Dampening is read by the FNF addon (0.1.6 or newer) at the end of each game."));
+            "Nothing yet. Needs games with a length and all four specs, or a reading from the FNF addon.",
+            Stats.DampeningEstimateNote));
         sb.Append(CountTable("Jerk Factor", "Enemy team", Stats.JerkFactor(ms), Stats.JerkFactorRule,
             "Nothing yet. Needs both enemies' ratings, which come from games recorded by the FNF addon."));
         sb.Append(Table("Nights", "Night", Stats.ByNight(ms)));
@@ -369,10 +372,10 @@ public static class WebSite
     private static string Empty(string title, string text) =>
         $"<section class=\"stat\"><h3>{H(title)}</h3><p class=\"empty\">{H(text)}</p></section>\n";
 
-    private static string Table(string title, string labelHeader, List<StatRow> rows, string emptyText = "Nothing yet.")
+    private static string Table(string title, string labelHeader, List<StatRow> rows, string emptyText = "Nothing yet.", string tip = "")
     {
         if (rows.Count == 0) return Empty(title, emptyText);
-        var sb = new StringBuilder(TableStart(title));
+        var sb = new StringBuilder(TableStart(title, tip));
         sb.Append($"<thead><tr><th>{H(labelHeader)}</th><th data-type=\"num\" class=\"r\">Games</th><th data-type=\"num\" class=\"r\">W-L</th><th data-type=\"num\" class=\"r\">Win %</th></tr></thead><tbody>");
         foreach (var r in rows)
             sb.Append($"<tr><td>{H(r.Label)}</td><td class=\"r\">{r.Games}</td><td class=\"r\" data-sort=\"{r.Games}\">{r.Record}</td>" +

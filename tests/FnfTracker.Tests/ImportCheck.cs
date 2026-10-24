@@ -51,6 +51,23 @@ public static class ImportCheck {
     var dampMs = new List<Match> { new() { Won = true, DampeningPct = 32 }, new() { Won = false, DampeningPct = 66 }, new() { Won = false, DampeningPct = 71 }, new() { Won = true } };
     var byDamp = Stats.ByDampening(dampMs);
     Check(byDamp.Select(r => $"{r.Label} {r.Record}").SequenceEqual(new[] { "Under 40% 1-0", "60-79% 0-2" }), "dampening buckets: " + string.Join(", ", byDamp.Select(r => $"{r.Label} {r.Record}")));
+    {
+      // Dampening estimate vs. the 8 real addon readings from Oct 23 (length s, healers in match, reading %).
+      PlayerSlot S(string cls, string spec) => new() { Class = cls, Spec = spec };
+      Match G(int secs, int healers, int? read = null) => new() { DurationSeconds = secs, DampeningPct = read,
+        OurTeam = new() { healers >= 1 ? S("Priest", "Discipline") : S("Hunter", "Beast Mastery"), S("Hunter", "Beast Mastery") },
+        Enemies = new() { healers >= 2 ? S("Druid", "Restoration") : S("Mage", "Arcane"), S("Rogue", "Subtlety") } };
+      var real = new[] { (114, 2, 51), (228, 2, 63), (90, 1, 29), (167, 2, 57), (167, 2, 57), (252, 2, 66), (82, 2, 48), (85, 2, 49) };
+      var off = real.Select(r => Stats.EstimateDampening(G(r.Item1, r.Item2))!.Value - r.Item3).ToList();
+      Check(off.All(d => Math.Abs(d) <= 1) && off.Count(d => d == 0) == 7, "estimate vs. 8 real readings, diffs: " + string.Join(",", off));
+      Check(Stats.EstimateDampening(G(200, 0)) == null, "no estimate with no healers (unconfirmed)");
+      var noSpec = G(200, 2); noSpec.Enemies[1].Spec = "";
+      Check(Stats.EstimateDampening(noSpec) == null && Stats.EstimateDampening(new Match()) == null, "no estimate without all specs or a length");
+      Check(Stats.DampeningText(G(167, 2)) == "Dampening ~57%" && Stats.DampeningText(G(167, 2, read: 58)) == "Dampening 58%", "reading beats estimate; estimate marked ~");
+      Check(Stats.EstimateDampening(G(1200, 2)) == 100, "capped at 100%");
+      var tbl = Stats.ByDampening(new[] { G(90, 1), G(252, 2, 66) });
+      Check(tbl.Select(r => $"{r.Label} {r.Games}").SequenceEqual(new[] { "Under 40% 1", "60-79% 1" }), "table uses readings and estimates");
+    }
     var oldAddon = AddonImport.ToMatch(Rec(""), out _)!;
     Check(oldAddon.OurMmr == null && oldAddon.EnemyMmr == null, $"0 mmr from old addon is not recorded: ours {oldAddon.OurMmr}, theirs {oldAddon.EnemyMmr}");
     var zeroData = new FnfData(); zeroData.Matches.Add(new Match { OurMmr = 0, EnemyMmr = 0 }); zeroData.Matches.Add(new Match { EnemyMmr = 1800 });

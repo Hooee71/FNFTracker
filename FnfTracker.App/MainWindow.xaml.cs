@@ -650,7 +650,8 @@ public partial class MainWindow : Window
         AddTable("Maps", "Map", Stats.ByMap(ms));
         AddTable("Game number in the night", "Games", Stats.ByGameNumber(ms));
         AddTable("Game length", "Length", Stats.ByDuration(ms));
-        AddTable("Dampening at the end", "Dampening", Stats.ByDampening(ms), emptyText: DampeningEmpty);
+        AddTable("Dampening at the end", "Dampening", Stats.ByDampening(ms), emptyText: DampeningEmpty,
+                 tip: Stats.DampeningEstimateNote.Replace(": starts", ":\nstarts").Replace(". Otherwise", ".\nOtherwise"));
         AddCountTable("Jerk Factor", "Enemy team", Stats.JerkFactor(ms), JerkFactorTip,
                       "Nothing yet. Needs both enemies' ratings, which come from games recorded by the FNF addon.");
         AddTable("Nights", "Night", Stats.ByNight(ms));
@@ -962,18 +963,18 @@ public partial class MainWindow : Window
         AddStatBlock(panel, rows.Count);
     }
 
-    private const string DampeningEmpty = "Nothing yet. Dampening is read by the FNF addon (0.1.6 or newer) at the end of each game.";
+    private const string DampeningEmpty = "Nothing yet. Needs games with a length and all four specs, or a reading from the FNF addon.";
 
-    private void AddTable(string title, string labelHeader, List<StatRow> rows, string emptyText = "Nothing yet.") =>
-        AddTable(title, labelHeader, rows.Select(r => new StatView(r)).ToList(), withOutput: false, emptyText);
+    private void AddTable(string title, string labelHeader, List<StatRow> rows, string emptyText = "Nothing yet.", string? tip = null) =>
+        AddTable(title, labelHeader, rows.Select(r => new StatView(r)).ToList(), withOutput: false, emptyText, tip);
 
     /// <summary>A stats table with our DPS/HPS vs. them alongside the record (enemy comps).</summary>
     private void AddTable(string title, string labelHeader, List<(StatRow Row, OutputGap? Output)> rows) =>
         AddTable(title, labelHeader, rows.Select(r => new StatView(r.Row, r.Output)).ToList(), withOutput: true);
 
-    private void AddTable(string title, string labelHeader, List<StatView> rows, bool withOutput, string emptyText = "Nothing yet.")
+    private void AddTable(string title, string labelHeader, List<StatView> rows, bool withOutput, string emptyText = "Nothing yet.", string? tip = null)
     {
-        var panel = new StackPanel { Margin = new Thickness(0, 0, 16, 16) };
+        var panel = new StackPanel { Margin = new Thickness(0, 0, 16, 16), ToolTip = tip };
         var heading = new TextBlock { Text = title, FontSize = 17, Margin = new Thickness(0, 6, 0, 6) };
         heading.SetResourceReference(TextBlock.FontFamilyProperty, "HeadingFont");
         panel.Children.Add(heading);

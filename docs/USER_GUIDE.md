@@ -110,7 +110,7 @@ Editing never touches the scoreboard numbers behind the DPS/HPS column.
 ### Columns
 
 **Night** and **#** (game number in that night), **Time**, **W/L**, **Enemies** (in class colours,
-with names; click a name to open that player's check-pvp.fr profile), **Map** (with Dampening at the end underneath, for addon games that read it), **Rating**, **+/-**, **Their MMR** (addon games only), **DPS/HPS** and
+with names; click a name to open that player's check-pvp.fr profile), **Map** (with Dampening at the end underneath; `~` means estimated from game length and healers), **Rating**, **+/-**, **Their MMR** (addon games only), **DPS/HPS** and
 **Notes**. Click a column header to sort by it.
 
 **DPS/HPS** (addon games only) compares your team's total damage and healing with the enemy team's:
@@ -162,7 +162,7 @@ The app remembers your choice.
   addon-recorded games only.
 - **Win-rate tables**, broken down by:
   comp type (double DPS vs. with a healer), map, game number in
-  the night, game length, Dampening at the end (addon 0.1.6+ games), night, tag, and repeat opponents (players you've met more
+  the night, game length, Dampening at the end, night, tag, and repeat opponents (players you've met more
   than once). When there's enough data you'll also see enemy MMR vs. yours, and our comps if we've
   played more than one.
 
