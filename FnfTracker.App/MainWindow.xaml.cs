@@ -38,6 +38,8 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
 
+        AppPaths.CopyLegacyFilesIfNeeded(); // Store version's first run: bring over the GitHub version's games
+
         try
         {
             _store.Load();

@@ -12,9 +12,7 @@ public static class PublishToken
 {
     private static readonly byte[] Entropy = Encoding.UTF8.GetBytes("FNFTracker.PublishToken.v1");
 
-    public static string FilePath { get; } = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "FNFTracker", "publish-token.dat");
+    public static string FilePath { get; } = Path.Combine(FnfTracker.Core.AppPaths.DataFolder, "publish-token.dat");
 
     public static bool Exists => File.Exists(FilePath);
 

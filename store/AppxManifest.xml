@@ -7,8 +7,7 @@
   xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
   xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
   xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
-  xmlns:desktop6="http://schemas.microsoft.com/appx/manifest/desktop/windows10/6"
-  IgnorableNamespaces="uap rescap desktop6">
+  IgnorableNamespaces="uap rescap">
 
   <Identity Name="$(IdentityName)" Publisher="$(Publisher)" Version="$(Version)" ProcessorArchitecture="x64" />
 
@@ -16,9 +15,6 @@
     <DisplayName>$(DisplayName)</DisplayName>
     <PublisherDisplayName>$(PublisherDisplayName)</PublisherDisplayName>
     <Logo>Images\StoreLogo.png</Logo>
-    <!-- Keep fnf-data.json in the real %LOCALAPPDATA%\FNFTracker instead of a hidden per-package copy,
-         so people moving from the GitHub version keep their games, and "Open folder" opens the right place. -->
-    <desktop6:FileSystemWriteVirtualization>disabled</desktop6:FileSystemWriteVirtualization>
   </Properties>
 
   <Dependencies>
@@ -45,7 +41,7 @@
   <Capabilities>
     <Capability Name="internetClient" />
     <rescap:Capability Name="runFullTrust" />
-    <!-- Needed for FileSystemWriteVirtualization=disabled above; explain it in Partner Center's submission notes. -->
-    <rescap:Capability Name="unvirtualizedResources" />
+    <!-- No unvirtualizedResources: the Store denied it. Data lives in the package's own LocalState folder
+         instead (see FnfTracker.Core\AppPaths.cs), which needs no special capability. -->
   </Capabilities>
 </Package>

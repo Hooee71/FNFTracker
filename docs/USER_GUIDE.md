@@ -283,14 +283,16 @@ it to a folder of its own like `C:\Games\FNFTracker` and try again.
 Your games live in one file:
 
 ```
-%LOCALAPPDATA%\FNFTracker\fnf-data.json
+%LOCALAPPDATA%\FNFTracker\fnf-data.json                          (GitHub download)
+%LOCALAPPDATA%\Packages\<the app's package>\LocalState\fnf-data.json   (Microsoft Store)
 ```
 
-Settings, then **Open data folder**, takes you straight there. Every time the app saves, it keeps
+Settings shows the exact path, and **Open data folder** takes you straight there. The first time the
+Store version starts, it copies your games over from the GitHub version's folder if it finds them. Every time the app saves, it keeps
 the previous version next to it as `fnf-data.bak.json`.
 
 To back up, copy that folder somewhere. To move to a new PC, install the app there and copy
-`fnf-data.json` into the same place (close the app first).
+`fnf-data.json` into its data folder (close the app first).
 
 ---
 

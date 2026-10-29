@@ -97,7 +97,7 @@ A "night" runs 6 AM to 6 AM, so a Friday session that goes past midnight still c
 - **Website:** publishes the Matches and Stats pages to a GitHub Pages repo (`WebSite.cs` builds the static
   pages from the same `Stats` code as the app; `SitePublisher.cs` pushes them as one commit through the Git
   Data API). Needs a public repo and a fine-grained token for it with Contents, Pages and Administration read/write; the token
-  is kept DPAPI-encrypted in `%LOCALAPPDATA%\FNFTracker\publish-token.dat`, never in `fnf-data.json`.
+  is kept DPAPI-encrypted in `publish-token.dat` in the data folder, never in `fnf-data.json`.
 - **Follow a friend's site:** each publish also uploads `matches.json` (all games, notes left out).
   Another copy of the app can follow that site over plain HTTPS and mirror it (`SiteSync.cs`): new games
   are added, the site's edits and deletes flow down, and the friend's own games and notes are untouched.
@@ -111,7 +111,7 @@ Tables and form fields stay in Segoe UI for readability.
 
 ## Data
 
-`%LOCALAPPDATA%\FNFTracker\fnf-data.json`, with the previous version kept as `fnf-data.bak.json` on every save.
+`%LOCALAPPDATA%\FNFTracker\fnf-data.json` (Store build: the package's `LocalState` folder, seeded from the old one on first run; see `AppPaths.cs`), with the previous version kept as `fnf-data.bak.json` on every save.
 
 ## Project layout
 

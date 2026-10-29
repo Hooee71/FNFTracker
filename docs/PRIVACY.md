@@ -8,7 +8,7 @@ FNF Arena Tracker ("the app") is a free, open-source Windows app for keeping tra
 
 ## What the app stores on your PC
 
-The app keeps its data in your Windows user folder (`%LOCALAPPDATA%\FNFTracker`):
+The app keeps its data in your Windows user folder: `%LOCALAPPDATA%\FNFTracker` for the copy downloaded from GitHub, or the app's own folder under `%LOCALAPPDATA%\Packages` for the Microsoft Store version (Settings → **Open data folder** shows it):
 
 - **Match records:** date and time, win or loss, map, rating and MMR, match length, damage and healing, your notes and tags, and the class, spec and in-game character name of each player in the match: you, your teammate and your opponents.
 - **Settings:** your character name, region and home realm, the location of your World of Warcraft folder, window layout, and the website and sync addresses you entered.
@@ -37,8 +37,8 @@ Like any internet request, these connections let the service on the other end (G
 
 ## Your choices and control
 
-- **See your data:** everything is in the app and in the files in `%LOCALAPPDATA%\FNFTracker`.
-- **Edit or delete:** you can edit or delete any match in the app. To remove everything, delete the `%LOCALAPPDATA%\FNFTracker` folder (or uninstall the app and then delete that folder).
+- **See your data:** everything is in the app and in the data folder (Settings → **Open data folder**).
+- **Edit or delete:** you can edit or delete any match in the app. To remove everything, delete the data folder. Uninstalling the Microsoft Store version deletes its folder automatically; for the GitHub copy, delete `%LOCALAPPDATA%\FNFTracker` after removing the app.
 - **Take down your public website:** delete the files or the repository on GitHub, or turn off GitHub Pages for it. Remember that other people who already synced from your site keep a copy until their app next syncs.
 - **Remove your GitHub token:** clear it in the app's Settings and revoke it on GitHub under **Settings → Developer settings → Personal access tokens**.
 - **Turn off update checks (GitHub download):** use the option in the app's Settings.

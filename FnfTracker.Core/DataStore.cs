@@ -6,7 +6,7 @@ namespace FnfTracker.Core;
 /// <summary>
 /// Saves everything to one JSON file. No database to install, the file is easy
 /// to back up, and two players can swap files and merge them.
-/// Default location: %LOCALAPPDATA%\FNFTracker\fnf-data.json
+/// Default location: fnf-data.json in <see cref="AppPaths.DataFolder"/>
 /// </summary>
 public sealed class DataStore
 {
@@ -21,9 +21,7 @@ public sealed class DataStore
 
     public DataStore(string? filePath = null)
     {
-        FilePath = filePath ?? Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "FNFTracker", "fnf-data.json");
+        FilePath = filePath ?? Path.Combine(AppPaths.DataFolder, "fnf-data.json");
     }
 
     public void Load()

@@ -63,4 +63,4 @@ https://github.com/Hooee71/FNFTracker/blob/main/docs/PRIVACY.md
 
 ## Submission notes (for the certification team)
 
-The package declares the unvirtualizedResources capability with file-system write virtualization disabled so the app's data file stays at %LOCALAPPDATA%\FNFTracker\fnf-data.json. That's the same location used by the non-Store version, so existing users keep their records, and the app's "open data folder" button opens the real file. The app also writes its own companion addon into the user's World of Warcraft AddOns folder when the user clicks "Install / update addon".
+This is a full-trust desktop (WPF) app; runFullTrust is the only restricted capability. The app stores its data in its own package folder (LocalState). When the user clicks "Install / update addon", it copies its own companion addon files into the World of Warcraft AddOns folder the user selected in Settings. Its only network use is publishing and syncing the user's match website on GitHub.
