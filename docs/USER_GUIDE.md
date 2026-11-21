@@ -138,7 +138,13 @@ Use **Show** at the top:
 - **Last 7 days** / **Last 30 days**
 - **Custom range**: pick a from and to date. Leave one blank for no limit on that side.
 
-The app remembers your choice.
+Next to it, **for** picks which of our team comps the stats cover: **All comps**, or one comp such
+as *Holy Paladin + Subtlety Rogue* (most played first, with its game count). Each comp has its own
+rating, so pick one to see its true record, rating graph and matchups without the other team's
+games mixed in. In **Single night**, ◀ ▶ then steps through the nights that comp played. Game
+number in the night still counts every game that night, whichever comp played it.
+
+The app remembers both choices.
 
 ### What you'll see
 
@@ -196,7 +202,8 @@ Sheets.
 The app can publish the **Matches** and **Stats** pages as a website anyone can open, on your phone,
 in Discord, wherever. It uses GitHub Pages, which is free. The site is just a copy of the pages:
 it has every game with the enemy names (linked to check-pvp.fr), and the stats for this season,
-all time, the last 30 days and the latest night. Your notes are left off. Friends who run the
+all time, the last 30 days and the latest night, each for all comps and for each of our comps
+(buttons under the range tabs, once there's more than one). Your notes are left off. Friends who run the
 app can also follow the site to get the games in their own copy (see below).
 
 **Only one of us needs to do this.** Whoever publishes should be the one with the merged games.

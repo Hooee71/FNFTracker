@@ -107,6 +107,9 @@ public sealed class AppSettings
     public DateTime? StatsFrom { get; set; }
     public DateTime? StatsTo { get; set; }
 
+    /// <summary>The Stats tab's comp choice (our team, e.g. "Holy Paladin + Subtlety Rogue"); null = all comps.</summary>
+    public string? StatsComp { get; set; }
+
     /// <summary>WoW install folder (the one containing _retail_, or _retail_ itself).</summary>
     public string? WowFolder { get; set; }
 
@@ -185,6 +188,6 @@ public static class Comp
                          .Select(p => p.Label)
                          .OrderBy(l => l, StringComparer.OrdinalIgnoreCase)
                          .ToList();
-        return labels.Count == 0 ? "(unknown)" : string.Join(" + ", labels);
+        return labels.Count == 0 ? Stats.UnknownComp : string.Join(" + ", labels);
     }
 }

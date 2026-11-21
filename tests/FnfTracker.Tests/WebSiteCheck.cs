@@ -55,6 +55,7 @@ public static class WebSiteCheck
         Check(index.Contains("Season 5-4 (56%)"), "header season record: " + Between(index, "class=\"overall\">", "<"));
         Check(index.Contains("Tonight: 4-4"), "header session line: " + Between(index, "class=\"session\">", "<"));
         Check(stats.Contains("data-range=\"season\"") && stats.Contains("data-range=\"night\"") && stats.Contains("data-panel=\"all\" hidden"), "range tabs, season first");
+        Check(!stats.Contains("data-comp="), "one comp: no comp buttons");
         Check(stats.Contains("Arms Warrior + Restoration Druid") && stats.Contains("<polyline"), "stat tables and rating chart");
         Check(stats.Contains("Repeat opponents") && stats.Contains("Bonk-Stormrage (Arms Warrior)"), "repeat opponents table");
         Check(site["site.css"].Contains("assets/Marcellus-Regular.ttf") && index.Contains(WebSite.AssetPaths.Logo), "pages reference the app's assets");
@@ -69,6 +70,21 @@ public static class WebSiteCheck
         Check(Between(WebSite.Build(data, fri.AddHours(3))["version.json"], "\"version\":\"", "\"") != version, "changed data, new version");
         var empty = WebSite.Build(new FnfData(), fri);
         Check(empty["index.html"].Contains("No games yet") && empty["stats.html"].Contains("data-range=\"all\""), "empty data still builds");
+        // A second comp gets its own buttons and panels, so the two teams' stats stay apart.
+        data.Matches.Add(new Match
+        {
+            PlayedAt = fri.AddDays(-3), Won = false, Map = "Mugambala",
+            OurTeam = new() { P("Paladin", "Holy"), P("Hunter", "Marksmanship") },
+            Enemies = new() { P("Mage", "Frost"), P("Rogue", "Assassination") },
+        });
+        var two = WebSite.Build(data, fri.AddHours(3));
+        var twoStats = two["stats.html"];
+        Check(twoStats.Contains("data-comp=\"\" class=\"on\">All comps") && twoStats.Contains("data-comp=\"discipline-priest-subtlety-rogue\"")
+              && twoStats.Contains("data-comp=\"holy-paladin-marksmanship-hunter\""), "comp buttons on the stats page");
+        Check(twoStats.Contains("data-panel=\"all--holy-paladin-marksmanship-hunter\" hidden") && twoStats.Contains("data-panel=\"night--discipline-priest-subtlety-rogue\""),
+              "a panel per range per comp");
+        Check(twoStats.Contains("· Holy Paladin + Marksmanship Hunter · 1 game(s)"), "comp panel summary names the comp");
+        Check(two["site.js"].Contains("data-comp") && two["site.js"].Contains("\"--\""), "script switches comps");
         return fails;
     }
 

@@ -170,6 +170,22 @@ public static class Stats
     public static List<StatRow> ByOurComp(IEnumerable<Match> ms) =>
         Group(ms.Select(m => (m.OurCompKey, m.Won)));
 
+    /// <summary>
+    /// The comps we've played, most-played first, for the Stats comp picker. Games where our team
+    /// isn't known ("(unknown)") go last.
+    /// </summary>
+    public static List<StatRow> OurCompChoices(IEnumerable<Match> ms) =>
+        ByOurComp(ms).OrderBy(r => r.Label == UnknownComp ? 1 : 0).ThenByDescending(r => r.Games).ThenBy(r => r.Label).ToList();
+
+    public const string UnknownComp = "(unknown)";
+
+    /// <summary>
+    /// Only the games played as one of our comps (e.g. "Holy Paladin + Subtlety Rogue"), so two
+    /// teams' records, ratings and matchups don't get mixed. Null = every comp.
+    /// </summary>
+    public static IEnumerable<Match> ForOurComp(IEnumerable<Match> ms, string? compKey) =>
+        string.IsNullOrEmpty(compKey) ? ms : ms.Where(m => string.Equals(m.OurCompKey, compKey, StringComparison.OrdinalIgnoreCase));
+
     /// <summary>Enemy rating gap of this or more (500+ apart) = one player carrying the other.</summary>
     public const int CarryGap = 500;
     /// <summary>Gap of this or more, but under <see cref="CarryGap"/> (201-499 apart) = questionable.</summary>
@@ -223,10 +239,14 @@ public static class Stats
           .SelectMany(g => g.OrderBy(m => m.PlayedAt).Select((m, i) => (m.Id, N: i + 1)))
           .ToDictionary(x => x.Id, x => x.N);
 
-    /// <summary>Win rate by how deep into the night the game was — spots fatigue/tilt.</summary>
-    public static List<StatRow> ByGameNumber(IReadOnlyList<Match> ms)
+    /// <summary>
+    /// Win rate by how deep into the night the game was — spots fatigue/tilt. numberFrom: the games
+    /// to count positions over (all of them, when <paramref name="ms"/> is one comp's), so a
+    /// second comp's first game of the night still counts as, say, game 8.
+    /// </summary>
+    public static List<StatRow> ByGameNumber(IReadOnlyList<Match> ms, IEnumerable<Match>? numberFrom = null)
     {
-        var numbers = GameNumbers(ms);
+        var numbers = GameNumbers(numberFrom ?? ms);
         string Bucket(int n) => n switch
         {
             <= 5 => "Games 1-5",

@@ -22,6 +22,23 @@ Check(sum.Nights==1, "nights (games past midnight stay Friday) " + sum.Nights);
 Check(ms.Last().PlayedAt.Day==17 && ms.Last().Night.DayOfWeek==DayOfWeek.Friday, "after-midnight game counts as Friday");
 var comps = Stats.ByEnemyComp(ms);
 Check(comps.Count==2 && comps.Any(c => c.Label=="Arms Warrior + Restoration Druid" && c.Games==6), "comp key sorted: " + string.Join(" | ", comps.Select(c=>$"{c.Label} {c.Record}")));
+{
+  // Our comps: each team's games kept apart, game number still counted over the whole night.
+  var other = new List<PlayerSlot> { P("Paladin","Holy"), P("Hunter","Marksmanship") };
+  var mixed = new List<Match>(ms) {
+    new Match { PlayedAt = fri.AddHours(4), Won = false, OurTeam = other, Enemies = new(){ P("Mage","Frost"), P("Rogue","Assassination") } },
+    new Match { PlayedAt = fri.AddHours(4.2), Won = true, OurTeam = other, Enemies = new(){ P("Mage","Frost"), P("Rogue","Assassination") } },
+    new Match { PlayedAt = fri.AddHours(4.4), Won = true, OurTeam = new(), Enemies = new(){ P("Mage","Frost"), P("Rogue","Assassination") } },
+  };
+  var choices = Stats.OurCompChoices(mixed);
+  Check(choices.Select(c => c.Label).SequenceEqual(new[]{ "Discipline Priest + Subtlety Rogue", "Holy Paladin + Marksmanship Hunter", Stats.UnknownComp }),
+        "our comp choices, most played first, unknown last: " + string.Join(" | ", choices.Select(c => $"{c.Label} {c.Games}")));
+  var pal = Stats.ForOurComp(mixed, "holy paladin + marksmanship hunter").ToList();
+  Check(pal.Count == 2 && Stats.Summarize(pal).Wins == 1, "comp filter is case-insensitive and keeps only that team");
+  Check(Stats.ForOurComp(mixed, null).Count() == mixed.Count, "no comp = every game");
+  Check(Stats.ByGameNumber(pal, mixed).Single().Label == "Games 11-15", "comp's game number counts the whole night: " + Stats.ByGameNumber(pal, mixed).Single().Label);
+  Check(Stats.ByGameNumber(pal).Single().Label == "Games 1-5", "without numberFrom, numbered within the list");
+}
 Check(Stats.ByCompType(ms).Select(c=>c.Label).OrderBy(x=>x, StringComparer.Ordinal).SequenceEqual(new[]{"DPS + Healer","Double DPS"}), "comp types");
 Check(Stats.ByGameNumber(ms).Select(g=>g.Label).SequenceEqual(new[]{"Games 1-5","Games 6-10","Games 11-15"}), "game number buckets " + string.Join(",", Stats.ByGameNumber(ms).Select(g=>$"{g.Label}:{g.Record}")));
 Check(Stats.RepeatOpponents(ms).Single().Games==6, "repeat opponent");

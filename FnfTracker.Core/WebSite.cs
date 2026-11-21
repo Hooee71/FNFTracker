@@ -8,8 +8,9 @@ namespace FnfTracker.Core;
 /// Builds the public website: a Matches page (index.html) and a Stats page (stats.html), as plain
 /// static files that any free host (GitHub Pages) can serve. All the numbers come from
 /// <see cref="Stats"/>, the same code behind the Stats tab, so the site and the app always agree.
-/// The Stats page is pre-built for a few ranges (all time, this season, last 30 days, latest night)
-/// and a little JavaScript switches between them; there's no server and nothing is computed in the browser.
+/// The Stats page is pre-built for a few ranges (all time, this season, last 30 days, latest night),
+/// each for all comps and for each of our comps, and a little JavaScript switches between them;
+/// there's no server and nothing is computed in the browser.
 /// Images and the font are added by the app (see <see cref="AssetPaths"/>).
 /// </summary>
 public static class WebSite
@@ -271,15 +272,20 @@ public static class WebSite
 
     private sealed record RangeView(string Id, string Label, string Description, List<Match> Matches);
 
-    private static List<RangeView> Ranges(FnfData data, DateTime now)
+    /// <summary>Our comps the Stats page gets its own panels for (most played first).</summary>
+    public const int MaxSiteComps = 6;
+
+    /// <summary>One of our comps on the Stats page: its address-friendly id and its games.</summary>
+    private sealed record CompView(string Id, string Label, List<Match> Matches);
+
+    private static List<RangeView> Ranges(List<Match> all, AppSettings settings, DateTime now)
     {
-        var all = data.Matches;
         var today = StatsRange.CurrentNight(now);
         RangeView Make(string id, string label, (DateOnly? From, DateOnly? To) r) =>
             new(id, label, StatsRange.Describe(r.From, r.To), StatsRange.Apply(all, r.From, r.To).ToList());
 
         var list = new List<RangeView>();
-        if (data.Settings.SeasonStart is DateTime season)
+        if (settings.SeasonStart is DateTime season)
             list.Add(Make("season", "This season", (DateOnly.FromDateTime(season), null)));
         list.Add(Make("all", "All time", (null, null)));
         list.Add(Make("last30", "Last 30 days", (today.AddDays(-29), today)));
@@ -288,27 +294,71 @@ public static class WebSite
         return list;
     }
 
+    /// <summary>
+    /// Our known comps, when there's more than one to tell apart. Ids are slugs of the comp
+    /// ("holy-paladin-subtlety-rogue") so a link to one keeps working after the next publish.
+    /// </summary>
+    private static List<CompView> Comps(List<Match> all)
+    {
+        var rows = Stats.OurCompChoices(all).Where(r => r.Label != Stats.UnknownComp).Take(MaxSiteComps).ToList();
+        if (rows.Count < 2) return new();
+        var used = new HashSet<string>();
+        var list = new List<CompView>();
+        foreach (var r in rows)
+        {
+            var slug = System.Text.RegularExpressions.Regex.Replace(r.Label.ToLowerInvariant(), "[^a-z0-9]+", "-").Trim('-');
+            if (slug.Length == 0) slug = "comp";
+            var id = slug;
+            for (int n = 2; !used.Add(id); n++) id = $"{slug}-{n}";
+            list.Add(new CompView(id, r.Label, Stats.ForOurComp(all, r.Label).ToList()));
+        }
+        return list;
+    }
+
     private static string StatsHtml(FnfData data, DateTime now)
     {
-        var ranges = Ranges(data, now);
+        var ranges = Ranges(data.Matches, data.Settings, now);
+        var comps = Comps(data.Matches);
         var sb = new StringBuilder();
         sb.Append("<div class=\"toolbar\"><div class=\"filter\" role=\"tablist\" aria-label=\"Which games\">");
         for (int i = 0; i < ranges.Count; i++)
             sb.Append($"<button type=\"button\" role=\"tab\" data-range=\"{ranges[i].Id}\"{(i == 0 ? " class=\"on\"" : "")}>{H(ranges[i].Label)}</button>");
-        sb.Append("</div></div>\n");
-
-        for (int i = 0; i < ranges.Count; i++)
+        sb.Append("</div>");
+        if (comps.Count > 0)
         {
-            var r = ranges[i];
-            sb.Append($"<section class=\"range\" data-panel=\"{r.Id}\"{(i == 0 ? "" : " hidden")}>\n");
-            sb.Append($"<p class=\"range-summary\">{H(r.Description)} · {r.Matches.Count} game(s)</p>\n");
-            sb.Append(RangeBody(r.Matches));
-            sb.Append("</section>\n");
+            // Our comps: each has its own rating, so its stats are kept apart from the others'.
+            sb.Append("<div class=\"filter\" role=\"group\" aria-label=\"Our comp\">");
+            sb.Append("<button type=\"button\" data-comp=\"\" class=\"on\">All comps</button>");
+            foreach (var c in comps)
+                sb.Append($"<button type=\"button\" data-comp=\"{c.Id}\">{H(c.Label)} <small>({c.Matches.Count})</small></button>");
+            sb.Append("</div>");
+        }
+        sb.Append("</div>\n");
+
+        bool first = true;
+        void Panels(string? compId, string? compLabel, List<RangeView> views)
+        {
+            foreach (var r in views)
+            {
+                var id = compId is null ? r.Id : $"{r.Id}--{compId}";
+                sb.Append($"<section class=\"range\" data-panel=\"{id}\"{(first ? "" : " hidden")}>\n");
+                sb.Append($"<p class=\"range-summary\">{H(r.Description)}{(compLabel is null ? "" : " · " + H(compLabel))} · {r.Matches.Count} game(s)</p>\n");
+                sb.Append(RangeBody(r.Matches, data.Matches));
+                sb.Append("</section>\n");
+                first = false;
+            }
+        }
+        Panels(null, null, ranges);
+        foreach (var c in comps)
+        {
+            // Same range tabs, over this comp's games ("Latest night" = the latest night it played).
+            var views = Ranges(c.Matches, data.Settings, now);
+            Panels(c.Id, c.Label, views);
         }
         return Page("Stats", StatsPage, data, now, sb.ToString());
     }
 
-    private static string RangeBody(List<Match> ms)
+    private static string RangeBody(List<Match> ms, List<Match> all)
     {
         var sb = new StringBuilder();
         var s = Stats.Summarize(ms);
@@ -336,7 +386,7 @@ public static class WebSite
         sb.Append(Table("Enemy DPS", "Spec", Stats.ByEnemySpec(ms, healers: false)));
         sb.Append(Table("Comp type", "Type", Stats.ByCompType(ms)));
         sb.Append(Table("Maps", "Map", Stats.ByMap(ms)));
-        sb.Append(Table("Game number in the night", "Games", Stats.ByGameNumber(ms)));
+        sb.Append(Table("Game number in the night", "Games", Stats.ByGameNumber(ms, all)));
         sb.Append(Table("Game length", "Length", Stats.ByDuration(ms)));
         sb.Append(Table("Dampening at the end", "Dampening", Stats.ByDampening(ms),
             "Nothing yet. Needs games with a length and all four specs, or a reading from the FNF addon.",
@@ -560,6 +610,7 @@ h3 { font-family: var(--heading); font-weight: normal; font-size: 17px; margin: 
   padding: 5px 14px; cursor: pointer; opacity: .75;
 }
 .filter button:hover { opacity: 1; }
+.filter button small { font-size: .85em; opacity: .65; }
 .filter button.on { background: rgba(230,180,80,.18); color: #F2DDA8; opacity: 1; }
 input[type=search] {
   font: inherit; color: var(--text); background: var(--surface); border: 1px solid var(--line);
@@ -711,24 +762,41 @@ footer { color: var(--dim); font-size: 12px; padding-top: 24px; padding-bottom: 
     apply();
   }
 
-  // Stats page: switch between the pre-built ranges; the choice is kept in the address (#all, #night…).
+  // Stats page: switch between the pre-built ranges and our comps; the choice is kept in the
+  // address (#all, #night, #all--holy-paladin-subtlety-rogue…).
   var tabs = document.querySelectorAll("[data-range]");
   if (tabs.length) {
-    function show(id) {
-      var found = false;
-      tabs.forEach(function (t) { var on = t.getAttribute("data-range") === id; t.classList.toggle("on", on); t.setAttribute("aria-selected", on); found = found || on; });
+    var compButtons = document.querySelectorAll("[data-comp]");
+    var cur = { range: tabs[0].getAttribute("data-range"), comp: "" };
+    function show(range, comp) {
+      var id = comp ? range + "--" + comp : range, found = false;
+      document.querySelectorAll("[data-panel]").forEach(function (p) { if (p.getAttribute("data-panel") === id) found = true; });
       if (!found) return false;
+      tabs.forEach(function (t) { var on = t.getAttribute("data-range") === range; t.classList.toggle("on", on); t.setAttribute("aria-selected", on); });
+      compButtons.forEach(function (b) { var on = b.getAttribute("data-comp") === comp; b.classList.toggle("on", on); b.setAttribute("aria-pressed", on); });
       document.querySelectorAll("[data-panel]").forEach(function (p) { p.hidden = p.getAttribute("data-panel") !== id; });
+      cur = { range: range, comp: comp };
       return true;
+    }
+    function remember() {
+      try { history.replaceState(null, "", "#" + (cur.comp ? cur.range + "--" + cur.comp : cur.range)); } catch (e) { }
     }
     tabs.forEach(function (t) {
       t.addEventListener("click", function () {
-        var id = t.getAttribute("data-range");
-        show(id);
-        try { history.replaceState(null, "", "#" + id); } catch (e) { }
+        var range = t.getAttribute("data-range");
+        if (!show(range, cur.comp)) show(range, "");
+        remember();
       });
     });
-    if (!show(location.hash.slice(1))) show(tabs[0].getAttribute("data-range"));
+    compButtons.forEach(function (b) {
+      b.addEventListener("click", function () {
+        if (!show(cur.range, b.getAttribute("data-comp"))) show(tabs[0].getAttribute("data-range"), b.getAttribute("data-comp"));
+        remember();
+      });
+    });
+    var hash = location.hash.slice(1), cut = hash.indexOf("--");
+    var hRange = cut < 0 ? hash : hash.slice(0, cut), hComp = cut < 0 ? "" : hash.slice(cut + 2);
+    if (!show(hRange, hComp) && !show(hRange, "")) show(tabs[0].getAttribute("data-range"), "");
   }
 
   if (restored) {

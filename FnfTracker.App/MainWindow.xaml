@@ -388,6 +388,11 @@
                                            FontFamily="{DynamicResource HeadingFont}" FontSize="16" />
                                 <ComboBox x:Name="RangeBox" Width="160" VerticalAlignment="Center"
                                           SelectionChanged="Range_Changed" />
+                                <TextBlock Text="for" VerticalAlignment="Center" Margin="10,0,10,0"
+                                           FontFamily="{DynamicResource HeadingFont}" FontSize="16" />
+                                <ComboBox x:Name="CompBox" MinWidth="220" VerticalAlignment="Center"
+                                          SelectionChanged="Comp_Changed"
+                                          ToolTip="Which of your team comps the stats cover. Each comp has its own rating, so pick one to keep them apart." />
 
                                 <StackPanel x:Name="NightPanel" Orientation="Horizontal" Margin="10,0,0,0" Visibility="Collapsed">
                                     <Button Content="&#x25C0;" Padding="10,4" Click="PrevNight_Click"
