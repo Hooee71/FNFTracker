@@ -24,6 +24,7 @@ public partial class MainWindow : Window
     private readonly List<FileSystemWatcher> _watchers = new();
     private ImageSource? _matchesArt, _statsArt, _settingsArt;
     private DateOnly? _singleNight;   // the night shown in "Single night" mode
+    private List<string?> _compKeys = new() { null };   // CompBox entries: null = all comps
     private readonly Version _currentVersion =
         Updater.Normalize(typeof(MainWindow).Assembly.GetName().Version ?? new Version(0, 0, 0));
     private UpdateInfo? _pendingUpdate;
@@ -437,6 +438,7 @@ public partial class MainWindow : Window
         MatchCountText.Text = AllMatches.Count == 1 ? "1 game" : $"{AllMatches.Count} games";
 
         RefreshHeader();
+        RefreshCompChoices();
         RefreshStats();
     }
 
@@ -623,7 +625,7 @@ public partial class MainWindow : Window
     private void RefreshStats()
     {
         var (rangeFrom, rangeTo) = CurrentRange();
-        var ms = StatsRange.Apply(AllMatches, rangeFrom, rangeTo).ToList();
+        var ms = StatsRange.Apply(CompMatches, rangeFrom, rangeTo).ToList();
         RangeSummary.Text = $"{StatsRange.Describe(rangeFrom, rangeTo)}  ·  {ms.Count} game(s)"
             + (SelectedRangeKind == RangeKind.Season && Settings.SeasonStart is null ? "  ·  set the season start in Settings" : "");
         var s = Stats.Summarize(ms);
@@ -650,7 +652,7 @@ public partial class MainWindow : Window
         AddTable("Enemy DPS", "Spec", Stats.ByEnemySpec(ms, healers: false));
         AddTable("Comp type", "Type", Stats.ByCompType(ms));
         AddTable("Maps", "Map", Stats.ByMap(ms));
-        AddTable("Game number in the night", "Games", Stats.ByGameNumber(ms));
+        AddTable("Game number in the night", "Games", Stats.ByGameNumber(ms, AllMatches));
         AddTable("Game length", "Length", Stats.ByDuration(ms));
         AddTable("Dampening at the end", "Dampening", Stats.ByDampening(ms), emptyText: DampeningEmpty,
                  tip: Stats.DampeningEstimateNote.Replace(": starts", ":\nstarts").Replace(". Otherwise", ".\nOtherwise"));
@@ -1156,7 +1158,7 @@ public partial class MainWindow : Window
     {
         var today = StatsRange.CurrentNight(DateTime.Now);
         if (SelectedRangeKind == RangeKind.SingleNight && _singleNight is null)
-            _singleNight = StatsRange.LatestNight(AllMatches) ?? today;
+            _singleNight = StatsRange.LatestNight(CompMatches) ?? today;
         return StatsRange.Resolve(SelectedRangeKind, today, Settings.SeasonStart, _singleNight,
                                   ToDateOnly(FromPicker.SelectedDate), ToDateOnly(ToPicker.SelectedDate));
     }
@@ -1188,6 +1190,53 @@ public partial class MainWindow : Window
         RefreshStats();
     }
 
+    // ───────────────────────── Stats comp ─────────────────────────
+
+    /// <summary>Our comp picked in the Stats tab's dropdown, or null for all comps.</summary>
+    private string? SelectedComp =>
+        CompBox.SelectedIndex > 0 && CompBox.SelectedIndex < _compKeys.Count ? _compKeys[CompBox.SelectedIndex] : null;
+
+    /// <summary>The games the Stats tab works from: just the chosen comp's, or all of them.</summary>
+    private List<Match> CompMatches => Stats.ForOurComp(AllMatches, SelectedComp).ToList();
+
+    /// <summary>
+    /// Fills the comp dropdown from the games we have (most played first) and re-selects the saved
+    /// choice. A saved comp with no games right now falls back to "All comps" without forgetting it.
+    /// </summary>
+    private void RefreshCompChoices()
+    {
+        var rows = Stats.OurCompChoices(AllMatches);
+        _compKeys = new List<string?> { null };
+        var labels = new List<string> { $"All comps  ({AllMatches.Count})" };
+        foreach (var r in rows)
+        {
+            _compKeys.Add(r.Label);
+            labels.Add($"{r.Label}  ({r.Games})");
+        }
+        var want = Settings.StatsComp;
+        int index = want is null ? 0 : _compKeys.FindIndex(k => k != null && string.Equals(k, want, StringComparison.OrdinalIgnoreCase));
+
+        var wasBusy = _busy;
+        _busy = true;
+        CompBox.ItemsSource = labels;
+        CompBox.SelectedIndex = Math.Max(0, index);
+        _busy = wasBusy;
+    }
+
+    private void Comp_Changed(object sender, SelectionChangedEventArgs e)
+    {
+        e.Handled = true; // don't let this bubble to the tab control
+        if (_busy) return;
+        Settings.StatsComp = SelectedComp;
+        Persist();
+        // Single night: stay on the night if this comp played it, else jump to its latest night.
+        if (SelectedRangeKind == RangeKind.SingleNight && _singleNight is DateOnly night
+            && !CompMatches.Any(m => m.Night == night))
+            _singleNight = null;
+        UpdateRangeControls();
+        RefreshStats();
+    }
+
     private void NightPicker_Changed(object? sender, SelectionChangedEventArgs e)
     {
         e.Handled = true;
@@ -1199,7 +1248,7 @@ public partial class MainWindow : Window
     private void StepNight(int direction)
     {
         var current = _singleNight ?? StatsRange.CurrentNight(DateTime.Now);
-        var next = StatsRange.StepNight(AllMatches, current, direction);
+        var next = StatsRange.StepNight(CompMatches, current, direction);
         if (next is null)
         {
             Status(direction < 0 ? "No earlier nights with games." : "No later nights with games.");
@@ -1256,6 +1305,7 @@ public partial class MainWindow : Window
         RangeBox.SelectedIndex = Math.Max(0, StatsRange.Options.ToList().FindIndex(o => o.Kind == Settings.StatsRange));
         FromPicker.SelectedDate = Settings.StatsFrom;
         ToPicker.SelectedDate = Settings.StatsTo;
+        RefreshCompChoices();
         _busy = false;
         UpdateRangeControls();
     }
